@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.19)
 project(FFEditor LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS 
+    Core 
+    Widgets
+    MultimediaWidgets
+    Multimedia
+)
 
 qt_standard_project_setup()
 
@@ -10,12 +15,18 @@ qt_add_executable(FFEditor
     main.cpp
     mainwindow.h
     mainwindow.cpp
+    MediaPlayer.h
+    MediaPlayer.cpp
+    MediaLoader.h
+    MediaLoader.cpp
 )
 
 target_link_libraries(FFEditor
     PRIVATE
         Qt::Core
         Qt::Widgets
+        Qt::Multimedia
+        Qt::MultimediaWidgets
 )
 
 include(GNUInstallDirs)
