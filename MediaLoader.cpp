@@ -64,7 +64,7 @@ MediaLoader::MediaLoader(QWidget *parent)
         if(item)  emit startPlayRequested(item->text());  
     });
 
-    resize(400, 300);
+    resize(560, 400);
 }
 
 void MediaLoader::onAddButtonClicked()
