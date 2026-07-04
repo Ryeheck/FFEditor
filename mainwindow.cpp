@@ -25,9 +25,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     MainLayout->addWidget(player->getVideoWidget());
 
     loader = new MediaLoader(this);
-    connect(loader, &MediaLoader::startPlayRequested, player, 
-            static_cast<void (MediaPlayer::*)(const QString &)>(&MediaPlayer::loadVideo));
-
+    connect(loader, &MediaLoader::startPlayRequested, this, [this] (const QString &path) {
+        player->loadVideo(path);
+        loader->hide();
+    });
+    
     QToolButton *startBtn = new QToolButton(this);
     connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
 
@@ -54,10 +56,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     // Volume songs
     volumeSlider = new CustomSlider(this);
-    // volumeSlider->setRange(0, 100);
-    volumeSlider->setValue(50);
-
     connect(volumeSlider, &CustomSlider::valueChanged, player, &MediaPlayer::setVolume);
+
+    volumeSlider->setValue(50);
 
     // Panel Tools (start, stop, ...) buttons
     QHBoxLayout *pnToolslLayout = new QHBoxLayout();
@@ -68,7 +69,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     pnToolslLayout->addWidget(volumeSlider);
 
     MainLayout->addLayout(pnToolslLayout);
-    // player->loadVideo(QUrl::fromLocalFile("/home/ryabi/Видео/output.mp4"));
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
