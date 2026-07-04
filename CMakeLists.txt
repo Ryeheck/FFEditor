@@ -10,6 +10,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 
 qt_standard_project_setup()
 
+qt_add_resources(RESOURCES "resources.qrc")
 qt_add_executable(FFEditor
     WIN32 MACOSX_BUNDLE
     main.cpp
@@ -19,6 +20,7 @@ qt_add_executable(FFEditor
     MediaPlayer.cpp
     MediaLoader.h
     MediaLoader.cpp
+    ${RESOURCES}
 )
 
 target_link_libraries(FFEditor
@@ -36,6 +38,8 @@ install(TARGETS FFEditor
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+
 
 qt_generate_deploy_app_script(
     TARGET FFEditor

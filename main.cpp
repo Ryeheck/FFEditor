@@ -21,6 +21,11 @@ int main(int argc, char *argv[])
     "   padding: 5px; "
     "}"                                                     // All buttons
     "QPushButton:hover { background-color: darkgray; }"    // При наведении на buttonssss
+    "QToolButton {"
+    "   background-color: transparent; "
+    "   border: 1px solid #555; "
+    "}"
+    "QToolButton:hover { background-color: gray; }"
     "QProgressBar {"                                       
     "   border: 1px solid #0e0e0e; " 
     "   border-radius: 4px; "         

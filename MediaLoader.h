@@ -1,15 +1,15 @@
 #ifndef MEDIALOADER_H
 #define MEDIALOADER_H
 
-#include <QWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QListWidget>
 #include <QTabWidget>
 #include <QLabel>
+#include <QDialog>
 
-class MediaLoader : public QWidget
+class MediaLoader : public QDialog
 {
     Q_OBJECT
 
@@ -26,8 +26,8 @@ signals:
 private:
     QListWidget *listWidget;
     QTabWidget  *tabWidget;
-    QWidget *tab1Content;
-    QWidget *tab2Content;
+    QWidget *fileTab;
+    QWidget *networkTab;
     QVBoxLayout *loaderLayout;
     QPushButton *addButton;
     QPushButton *removeButton;

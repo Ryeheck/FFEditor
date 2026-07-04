@@ -1,6 +1,6 @@
 #include "MediaLoader.h"
 
-#include <QWidget>
+#include <QDialog>
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QHBoxLayout>
@@ -8,25 +8,26 @@
 #include <QListWidget>
 #include <QTabWidget>
 #include <QLabel>
+#include <QWidget>
 
 MediaLoader::MediaLoader(QWidget *parent)
-    : QWidget(parent)
+    : QDialog(parent)
 {
     loaderLayout = new QVBoxLayout(this);
     tabWidget = new QTabWidget(this);
 
-    tab1Content = new QWidget();
-    tab2Content = new QWidget();
+    fileTab = new QWidget();
+    networkTab = new QWidget();
 
-    tabWidget->addTab(tab1Content, "File");
-    tabWidget->addTab(tab2Content, "Network");
+    tabWidget->addTab(fileTab, "File");
+    tabWidget->addTab(networkTab, "Network");
 
     addButton = new QPushButton("Add file", this);
     removeButton = new QPushButton("Remove file", this);
     playButton = new QPushButton("Play", this);
 
     // Main vertical layout to tab 1 ("File")
-    QVBoxLayout *mainTab1Layout = new QVBoxLayout(tab1Content);
+    QVBoxLayout *mainFileLayout = new QVBoxLayout(fileTab);
 
     // Top horizontal layout to tab 1
     QHBoxLayout *top1Layout = new QHBoxLayout();
@@ -44,17 +45,19 @@ MediaLoader::MediaLoader(QWidget *parent)
     top1Layout->addLayout(top1BtnsLayout);
 
     // Main layout
-    mainTab1Layout->addLayout(top1Layout);
-    mainTab1Layout->addWidget(playButton);
+    mainFileLayout->addLayout(top1Layout);
+    mainFileLayout->addWidget(playButton);
     
+    loaderLayout->addWidget(tabWidget);
+
     connect(addButton, &QPushButton::clicked, this, &MediaLoader::onAddButtonClicked);
     connect(playButton, &QPushButton::clicked, this, [this] () {  
-        QListWidgetItem *item = listWidget->currentItem();
+        QListWidgetItem *item = listWidget->item(0);
 
         if(item)  emit startPlayRequested(item->text());  
     });
 
-    resize(560, 400);
+    resize(400, 300);
 }
 
 void MediaLoader::onAddButtonClicked()

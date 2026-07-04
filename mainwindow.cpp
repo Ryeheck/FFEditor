@@ -7,23 +7,34 @@
 #include <QMimeData>
 #include <QDragEnterEvent>
 #include <QUrl>
+#include <QToolButton>
+#include <QDialog>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     centralWidget = new QWidget(this);
+    VLayout = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
 
     player = new MediaPlayer();
     player->getVideoWidget()->installEventFilter(this);
     player->getVideoWidget()->setAcceptDrops(true);
-    
-    loader = new MediaLoader();
 
-    VLayout = new QVBoxLayout(centralWidget);
     VLayout->addWidget(player->getVideoWidget());
-    VLayout->addWidget(loader);
 
+    loader = new MediaLoader(this);
     connect(loader, &MediaLoader::startPlayRequested, player, &MediaPlayer::loadVideo);
+
+    QToolButton *startBtn = new QToolButton(this);
+    startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    startBtn->setIcon(QIcon(":/icons/iconStart2.png"));
+    startBtn->setIconSize(QSize(32, 32));
+    startBtn->show();
+    VLayout->addWidget(startBtn);
+    
+    connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
+
     // player->loadVideo(QUrl::fromLocalFile("/home/ryabi/Видео/output.mp4"));
 }
 
