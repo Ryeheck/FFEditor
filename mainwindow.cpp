@@ -1,40 +1,73 @@
 #include "mainwindow.h"
 #include "MediaPlayer.h"
 #include "MediaLoader.h"
+#include "painter/customSlider.h"
 
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QDropEvent>
 #include <QMimeData>
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QToolButton>
-#include <QDialog>
-#include <QDir>
+#include <QSlider>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     centralWidget = new QWidget(this);
-    VLayout = new QVBoxLayout(centralWidget);
+    MainLayout = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
 
     player = new MediaPlayer();
     player->getVideoWidget()->installEventFilter(this);
     player->getVideoWidget()->setAcceptDrops(true);
 
-    VLayout->addWidget(player->getVideoWidget());
+    MainLayout->addWidget(player->getVideoWidget());
 
     loader = new MediaLoader(this);
-    connect(loader, &MediaLoader::startPlayRequested, player, &MediaPlayer::loadVideo);
+    connect(loader, &MediaLoader::startPlayRequested, player, 
+            static_cast<void (MediaPlayer::*)(const QString &)>(&MediaPlayer::loadVideo));
 
     QToolButton *startBtn = new QToolButton(this);
+    connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
+
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     startBtn->setIcon(QIcon(":/icons/iconStart2.png"));
     startBtn->setIconSize(QSize(32, 32));
     startBtn->show();
-    VLayout->addWidget(startBtn);
     
-    connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
+    QToolButton *stopBtn = new QToolButton(this);
+    connect(stopBtn, &QToolButton::clicked, player, &MediaPlayer::stopVideo);
+    
+    stopBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    stopBtn->setIcon(QIcon(/* Icon */));
+    stopBtn->setIconSize(QSize(32, 32));
+    stopBtn->show();
+    
+    QToolButton *pauseBtn = new QToolButton(this);
+    connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::pauseVideo);
 
+    pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    pauseBtn->setIcon(QIcon(/* Icon */));
+    pauseBtn->setIconSize(QSize(32, 32));
+    pauseBtn->show();
+
+    // Volume songs
+    volumeSlider = new CustomSlider(this);
+    // volumeSlider->setRange(0, 100);
+    volumeSlider->setValue(50);
+
+    connect(volumeSlider, &CustomSlider::valueChanged, player, &MediaPlayer::setVolume);
+
+    // Panel Tools (start, stop, ...) buttons
+    QHBoxLayout *pnToolslLayout = new QHBoxLayout();
+    pnToolslLayout->addWidget(startBtn);
+    pnToolslLayout->addWidget(pauseBtn);
+    pnToolslLayout->addWidget(stopBtn);
+    pnToolslLayout->addStretch();
+    pnToolslLayout->addWidget(volumeSlider);
+
+    MainLayout->addLayout(pnToolslLayout);
     // player->loadVideo(QUrl::fromLocalFile("/home/ryabi/Видео/output.mp4"));
 }
 
@@ -54,7 +87,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
             const QList<QUrl> urls = dropEvent->mimeData()->urls();
-            player->loadVideo(urls.first().toLocalFile());
+            player->loadVideo(urls.first());
             return true;
         }
     }
