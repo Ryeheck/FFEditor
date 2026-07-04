@@ -32,6 +32,7 @@ private:
     QPushButton *addButton;
     QPushButton *removeButton;
     QPushButton *playButton;
+    QPushButton *closeButton;
 };
 
 #endif // MEDIALOADER_H

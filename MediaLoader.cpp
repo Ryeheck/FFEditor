@@ -25,6 +25,7 @@ MediaLoader::MediaLoader(QWidget *parent)
     addButton = new QPushButton("Add file", this);
     removeButton = new QPushButton("Remove file", this);
     playButton = new QPushButton("Play", this);
+    closeButton = new QPushButton("Close", this);
 
     // Main vertical layout to tab 1 ("File")
     QVBoxLayout *mainFileLayout = new QVBoxLayout(fileTab);
@@ -44,12 +45,18 @@ MediaLoader::MediaLoader(QWidget *parent)
 
     top1Layout->addLayout(top1BtnsLayout);
 
+    // Bottom buttons right
+    QHBoxLayout *Bttm1BtnsLayout = new QHBoxLayout();
+    Bttm1BtnsLayout->addStretch();
+    Bttm1BtnsLayout->addWidget(playButton);
+    Bttm1BtnsLayout->addWidget(closeButton);
+
     // Main layout
     mainFileLayout->addLayout(top1Layout);
-    mainFileLayout->addWidget(playButton);
-    
+    mainFileLayout->addLayout(Bttm1BtnsLayout);
     loaderLayout->addWidget(tabWidget);
 
+    connect(closeButton, &QPushButton::clicked, this, &MediaLoader::hide);
     connect(addButton, &QPushButton::clicked, this, &MediaLoader::onAddButtonClicked);
     connect(playButton, &QPushButton::clicked, this, [this] () {  
         QListWidgetItem *item = listWidget->item(0);
