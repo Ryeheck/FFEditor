@@ -23,8 +23,7 @@ qt_add_executable(FFEditor
     painter/customVolume.h
     ${RESOURCES}
     painter/customVolume.cpp
-    painter/customTimeLine.h
-    painter/customTimeLine.cpp
+    painter/customPlayhead.hpp
 
 )
 

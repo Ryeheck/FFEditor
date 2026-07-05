@@ -22,6 +22,7 @@ MediaPlayer::MediaPlayer(QObject *parent)
     player->setVideoOutput(videoWidget);
     player->setAudioOutput(audioOutput);
 
+    connect(player, &QMediaPlayer::positionChanged, this, &MediaPlayer::onInternalPositionChanged);
     // connect(player, &QMediaPlayer::mediaStatusChanged, this, &MediaPlayer::HandleMediaStatus);
 }
 
@@ -48,6 +49,11 @@ void MediaPlayer::loadVideo(const QString &path)
         player->setSource(url);  
         player->play();
     }  
+}
+
+void MediaPlayer::onInternalPositionChanged(qint64 pos)
+{
+    emit positionChanged(pos, player->duration());
 }
 
 void MediaPlayer::pauseVideo() 

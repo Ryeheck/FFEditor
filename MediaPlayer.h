@@ -11,6 +11,9 @@ class MediaPlayer : public QObject
 {
     Q_OBJECT
 
+signals:
+    void positionChanged(qint64 pos, qint64 totalMS);
+
 public:
     explicit MediaPlayer(QObject *parent = nullptr);
     
@@ -22,12 +25,14 @@ public:
     void stopVideo()  {  player->stop();  };
     void playVideo()  {  player->play();  };
     void pauseVideo();
+    
     ~MediaPlayer() override;
 
 private slots:
     void HandleMediaStatus(QMediaPlayer::MediaStatus status);
 
 private:
+    void onInternalPositionChanged(qint64 pos);
     QMediaPlayer *player;
     QVideoWidget *videoWidget;
     QAudioOutput *audioOutput;

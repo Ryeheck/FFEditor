@@ -2,6 +2,7 @@
 #include "MediaPlayer.h"
 #include "MediaLoader.h"
 #include "painter/customVolume.h"
+#include "painter/customPlayhead.hpp"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -53,20 +54,24 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     pauseBtn->setIcon(QIcon(/* Icon */));
     pauseBtn->setIconSize(QSize(32, 32));
     pauseBtn->show();
-
-    // Volume songs
-    volumeSlider = new CustomVolume(this);
-    connect(volumeSlider, &CustomVolume::valueChanged, player, &MediaPlayer::setVolume);
-
-    volumeSlider->setValue(50);
-
+    
     // Panel Tools (start, stop, ...) buttons
     QHBoxLayout *pnToolslLayout = new QHBoxLayout();
     pnToolslLayout->addWidget(startBtn);
     pnToolslLayout->addWidget(pauseBtn);
     pnToolslLayout->addWidget(stopBtn);
     pnToolslLayout->addStretch();
+    
+    // Volume songs
+    volumeSlider = new CustomVolume(this);
+    connect(volumeSlider, &CustomVolume::valueChanged, player, &MediaPlayer::setVolume);
+    volumeSlider->setValue(10);
     pnToolslLayout->addWidget(volumeSlider);
+    
+    // Playhead
+    playhead = new CustomPlayhead(this);
+    connect(player, &MediaPlayer::positionChanged, playhead, &CustomPlayhead::onPositionChanged);
+    MainLayout->addWidget(playhead);
 
     MainLayout->addLayout(pnToolslLayout);
 }

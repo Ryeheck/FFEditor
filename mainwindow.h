@@ -4,6 +4,7 @@
 #include "MediaPlayer.h"
 #include "MediaLoader.h"
 #include "painter/customVolume.h"
+#include "painter/customPlayhead.hpp"
 
 #include <QMainWindow>
 #include <QVBoxLayout>
@@ -27,7 +28,7 @@ private:
     MediaLoader *loader;
     QVBoxLayout *MainLayout;
     CustomVolume *volumeSlider;
-    
+    CustomPlayhead *playhead;
 };
 
 #endif // MAINWINDOW_H

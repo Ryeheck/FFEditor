@@ -23,6 +23,7 @@ void CustomVolume::paintEvent(QPaintEvent *event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
+    // Outline
     QPen pen;
     pen.setColor(QColor(255, 255, 255));
     pen.setWidth(2);
