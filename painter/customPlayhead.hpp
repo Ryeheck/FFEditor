@@ -42,24 +42,16 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
-        // Outline
-        QPen pen;
-        pen.setColor(QColor(255, 255, 255));
-        pen.setWidth(2);
-        pen.setJoinStyle(Qt::RoundJoin);
-        painter.setPen(pen);
+        painter.fillRect(0, 0, widthRect, height(), Qt::blue); // Rectangle playhead
 
+        painter.setPen(QPen(Qt::white, 2, Qt::SolidLine, Qt::RoundCap));
         painter.drawRect(rect());
-
-        QPainterPath playhead;
-        playhead.addRect(0, 0, widthRect, height()); // Rectangle playhead
-
-        painter.fillPath(playhead, Qt::blue);
     };
 
     void mouseMoveEvent(QMouseEvent *event) override
     {
         qreal posInWidget = (qreal)event->pos().x() / width();
+        // posInWidget = qBound(0.0, posInWidget, 1.0);
         qint64 pos = (qint64)(posInWidget * duration);
         
         onPositionChanged(pos, duration);
