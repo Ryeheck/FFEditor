@@ -33,12 +33,12 @@ void CustomVolume::paintEvent(QPaintEvent *event)
     painter.drawPath(triangle);
 
     // Progress bar
-    float barWidth = width() * _value;
+    float barWidth = width() * m_value;
     
     QPainterPath ProgressBar;
     ProgressBar.moveTo(0, height());
     ProgressBar.lineTo(barWidth, height());
-    ProgressBar.lineTo(barWidth, height() * (1.0 - _value));
+    ProgressBar.lineTo(barWidth, height() * (1.0 - m_value));
     ProgressBar.closeSubpath();
 
     painter.fillPath(ProgressBar, Qt::blue);
@@ -48,16 +48,16 @@ void CustomVolume::paintEvent(QPaintEvent *event)
 void CustomVolume::mouseMoveEvent(QMouseEvent *event)
 {
     float newValue = event->pos().x() / (float)width();
-    _value = qBound(0.0, newValue, 1.0);
+    m_value = qBound(0.0, newValue, 1.0);
 
     update();
-    emit valueChanged(_value);
+    emit valueChanged(m_value);
 }
 
 void CustomVolume::setValue(int newValue)
 {
     if(newValue > -1 && newValue < 101) {
-        _value = newValue / 100.0;
+        m_value = newValue / 100.0;
         update();
     }   
 }

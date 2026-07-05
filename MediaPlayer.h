@@ -17,14 +17,14 @@ signals:
 public:
     explicit MediaPlayer(QObject *parent = nullptr);
     
-    QVideoWidget *getVideoWidget() {  return videoWidget;  };
+    QVideoWidget *getVideoWidget() {  return m_videoWidget;  };
     
     void onPositionChanged(qint64 pos);
     void loadVideo(const QString &path);
     void loadVideo(const QUrl &url);
-    void setVolume(float value) {  audioOutput->setVolume(value);  };
-    void stopVideo()  {  player->stop();  };
-    void playVideo()  {  player->play();  };
+    void setVolume(float value) {  m_audioOutput->setVolume(value);  };
+    void stopVideo()  {  m_player->stop();  };
+    void playVideo()  {  m_player->play();  };
     void pauseVideo();
     
     ~MediaPlayer() override;
@@ -34,10 +34,10 @@ private slots:
 
 private:
     void onInternalPositionChanged(qint64 pos);
-    QMediaPlayer *player;
-    QVideoWidget *videoWidget;
-    QAudioOutput *audioOutput;
-    QSlider *volumeSlider;
+    QMediaPlayer *m_player;
+    QVideoWidget *m_videoWidget;
+    QAudioOutput *m_audioOutput;
+
 };
 
 #endif // MEDIAPLAYER_H

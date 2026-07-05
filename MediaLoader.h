@@ -24,15 +24,15 @@ signals:
     void startPlayRequested(const QString &path);
 
 private:
-    QListWidget *listWidget;
-    QTabWidget  *tabWidget;
-    QWidget *fileTab;
-    QWidget *networkTab;
-    QVBoxLayout *loaderLayout;
-    QPushButton *addButton;
-    QPushButton *removeButton;
-    QPushButton *playButton;
-    QPushButton *closeButton;
+    QListWidget *m_listWidget;
+    QTabWidget  *m_tabWidget;
+    QWidget *m_fileTab;
+    QWidget *m_networkTab;
+    QVBoxLayout *m_loaderLayout;
+    QPushButton *m_addButton;
+    QPushButton *m_removeButton;
+    QPushButton *m_playButton;
+    QPushButton *m_closeButton;
 };
 
 #endif // MEDIALOADER_H

@@ -6,7 +6,7 @@
 class CustomVolume : public QWidget
 {
     Q_OBJECT
-    float _value = 0.0f;
+    float m_value = 0.0f;
 
 signals:
     void valueChanged(float newValue);
@@ -14,7 +14,7 @@ signals:
 public:
     CustomVolume(QWidget *parent = nullptr);
     void setValue(int value);
-    int value() const {  return _value;  };
+    int value() const {  return m_value;  };
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mouseMoveEvent(QMouseEvent *mouse) override;

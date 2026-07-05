@@ -9,8 +9,8 @@
 class CustomPlayhead : public QWidget
 {
     Q_OBJECT
-    qreal widthRect = 0;
-    qreal duration = 0;
+    qreal m_widthRect = 0;
+    qreal m_duration = 0;
 
 signals:
     void positionChanged(qint64 pos);
@@ -30,9 +30,9 @@ public:
     void onPositionChanged(qint64 pos, qint64 duration)
     {
         if (duration <= 0) return;
-        this->duration = duration;
+        m_duration = duration;
 
-        this->widthRect = ((qreal)pos * width()) / this->duration;
+        m_widthRect = ((qreal)pos * width()) / m_duration;
         update();
     };
 
@@ -42,7 +42,7 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
-        painter.fillRect(0, 0, widthRect, height(), Qt::blue); // Rectangle playhead
+        painter.fillRect(0, 0, m_widthRect, height(), Qt::blue); // Rectangle playhead
 
         painter.setPen(QPen(Qt::white, 2, Qt::SolidLine, Qt::RoundCap)); // Outline
         painter.drawRect(rect());
@@ -52,9 +52,9 @@ protected:
     {
         qreal posInWidget = (qreal)event->pos().x() / width();
         // posInWidget = qBound(0.0, posInWidget, 1.0);
-        qint64 pos = (qint64)(posInWidget * duration);
+        qint64 pos = (qint64)(posInWidget * m_duration);
         
-        onPositionChanged(pos, duration);
+        onPositionChanged(pos, m_duration);
         emit positionChanged(pos);
     };
     
