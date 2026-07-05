@@ -19,7 +19,7 @@ public:
     CustomPlayhead(QWidget *parent = nullptr) 
     {
         setFixedHeight(10);
-        setFixedWidth(800);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
         QPalette pal = palette();
         pal.setColor(QPalette::Window, QColor(50, 50, 50));
