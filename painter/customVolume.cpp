@@ -22,14 +22,7 @@ void CustomVolume::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-
-    // Outline
-    QPen pen;
-    pen.setColor(QColor(255, 255, 255));
-    pen.setWidth(2);
-    pen.setJoinStyle(Qt::RoundJoin);
-    painter.setPen(pen);
-
+    
     QPainterPath triangle;
     triangle.moveTo(0, height());       // Bottom left corner
     triangle.lineTo(width(), height()); // Bottom right corner
@@ -38,17 +31,18 @@ void CustomVolume::paintEvent(QPaintEvent *event)
 
     painter.fillPath(triangle, Qt::transparent);
     painter.drawPath(triangle);
+
     // Progress bar
     float barWidth = width() * _value;
     
-    QPainterPath trianglePGBar;
-    trianglePGBar.moveTo(0, height());
-    trianglePGBar.lineTo(barWidth, height());
-    trianglePGBar.lineTo(barWidth, height() * (1.0 - _value));
-    trianglePGBar.closeSubpath();
+    QPainterPath ProgressBar;
+    ProgressBar.moveTo(0, height());
+    ProgressBar.lineTo(barWidth, height());
+    ProgressBar.lineTo(barWidth, height() * (1.0 - _value));
+    ProgressBar.closeSubpath();
 
-    painter.fillPath(trianglePGBar, Qt::blue);
-
+    painter.fillPath(ProgressBar, Qt::blue);
+    painter.setPen(QPen(Qt::white, 2, Qt::SolidLine, Qt::RoundCap)); // Outline
 }
 
 void CustomVolume::mouseMoveEvent(QMouseEvent *event)
