@@ -56,6 +56,11 @@ void MediaPlayer::onInternalPositionChanged(qint64 pos)
     emit positionChanged(pos, player->duration());
 }
 
+void MediaPlayer::onPositionChanged(qint64 pos)
+{
+    player->setPosition(pos);
+}
+
 void MediaPlayer::pauseVideo() 
 {  
     if(player->playbackState() == QMediaPlayer::PlayingState)

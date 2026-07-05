@@ -71,6 +71,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Playhead
     playhead = new CustomPlayhead(this);
     connect(player, &MediaPlayer::positionChanged, playhead, &CustomPlayhead::onPositionChanged);
+    connect(playhead, &CustomPlayhead::positionChanged, player, &MediaPlayer::onPositionChanged);
     MainLayout->addWidget(playhead);
 
     MainLayout->addLayout(pnToolslLayout);

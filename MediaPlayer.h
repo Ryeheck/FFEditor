@@ -19,6 +19,7 @@ public:
     
     QVideoWidget *getVideoWidget() {  return videoWidget;  };
     
+    void onPositionChanged(qint64 pos);
     void loadVideo(const QString &path);
     void loadVideo(const QUrl &url);
     void setVolume(float value) {  audioOutput->setVolume(value);  };

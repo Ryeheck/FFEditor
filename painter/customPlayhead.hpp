@@ -9,10 +9,11 @@
 class CustomPlayhead : public QWidget
 {
     Q_OBJECT
-    float x = 0;
+    qreal widthRect = 0;
+    qreal duration = 0;
 
 signals:
-    
+    void positionChanged(qint64 pos);
 
 public:
     CustomPlayhead(QWidget *parent = nullptr) 
@@ -28,9 +29,10 @@ public:
 
     void onPositionChanged(qint64 pos, qint64 duration)
     {
-        if (duration <= 0)  return;
+        if (duration <= 0) return;
+        this->duration = duration;
 
-        this->x = ((float)pos * width()) / duration;
+        this->widthRect = ((qreal)pos * width()) / this->duration;
         update();
     };
 
@@ -50,14 +52,18 @@ protected:
         painter.drawRect(rect());
 
         QPainterPath playhead;
-        playhead.addRect(0, 0, x, height()); // Rectangle playhead
+        playhead.addRect(0, 0, widthRect, height()); // Rectangle playhead
 
         painter.fillPath(playhead, Qt::blue);
     };
 
-    void mouseMoveEvent(QMouseEvent *mouse) override
+    void mouseMoveEvent(QMouseEvent *event) override
     {
-
+        qreal posInWidget = (qreal)event->pos().x() / width();
+        qint64 pos = (qint64)(posInWidget * duration);
+        
+        onPositionChanged(pos, duration);
+        emit positionChanged(pos);
     };
     
 };
