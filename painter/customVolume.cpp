@@ -1,11 +1,11 @@
-#include "customSlider.h"
+#include "customVolume.h"
 
 #include <QWidget>
 #include <QPainter>
 #include <QMouseEvent>
 #include <QPainterPath>
 
-CustomSlider::CustomSlider(QWidget *parent)
+CustomVolume::CustomVolume(QWidget *parent)
     : QWidget(parent)
 {
     setFixedHeight(30);
@@ -18,10 +18,16 @@ CustomSlider::CustomSlider(QWidget *parent)
 
 }
 
-void CustomSlider::paintEvent(QPaintEvent *event)
+void CustomVolume::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
+
+    QPen pen;
+    pen.setColor(QColor(255, 255, 255));
+    pen.setWidth(2);
+    pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(pen);
 
     QPainterPath triangle;
     triangle.moveTo(0, height());       // Bottom left corner
@@ -29,8 +35,8 @@ void CustomSlider::paintEvent(QPaintEvent *event)
     triangle.lineTo(width(), 0);        // Top left corner
     triangle.closeSubpath();
 
-    painter.fillPath(triangle, Qt::white);
-
+    painter.fillPath(triangle, Qt::transparent);
+    painter.drawPath(triangle);
     // Progress bar
     float barWidth = width() * _value;
     
@@ -44,7 +50,7 @@ void CustomSlider::paintEvent(QPaintEvent *event)
 
 }
 
-void CustomSlider::mouseMoveEvent(QMouseEvent *event)
+void CustomVolume::mouseMoveEvent(QMouseEvent *event)
 {
     float newValue = event->pos().x() / (float)width();
     _value = qBound(0.0, newValue, 1.0);
@@ -53,7 +59,7 @@ void CustomSlider::mouseMoveEvent(QMouseEvent *event)
     emit valueChanged(_value);
 }
 
-void CustomSlider::setValue(int newValue)
+void CustomVolume::setValue(int newValue)
 {
     if(newValue > -1 && newValue < 101) {
         _value = newValue / 100.0;

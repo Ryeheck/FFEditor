@@ -1,9 +1,9 @@
-#ifndef CUSTOMSLIDER_H
-#define CUSTOMSLIDER_H
+#ifndef CUSTOMVOlUME_H
+#define CUSTOMVOlUME_H
 
 #include <QWidget>
 
-class CustomSlider : public QWidget
+class CustomVolume : public QWidget
 {
     Q_OBJECT
     float _value = 0.0f;
@@ -12,7 +12,7 @@ signals:
     void valueChanged(float newValue);
 
 public:
-    CustomSlider(QWidget *parent = nullptr);
+    CustomVolume(QWidget *parent = nullptr);
     void setValue(int value);
     int value() const {  return _value;  };
 protected:
@@ -22,4 +22,4 @@ protected:
 };
 
 
-#endif // CUSTOMSLIDER_H
+#endif // CUSTOMVOlUME_H

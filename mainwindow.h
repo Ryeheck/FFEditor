@@ -3,7 +3,7 @@
 
 #include "MediaPlayer.h"
 #include "MediaLoader.h"
-#include "painter/customSlider.h"
+#include "painter/customVolume.h"
 
 #include <QMainWindow>
 #include <QVBoxLayout>
@@ -26,7 +26,7 @@ private:
     MediaPlayer *player;
     MediaLoader *loader;
     QVBoxLayout *MainLayout;
-    CustomSlider *volumeSlider;
+    CustomVolume *volumeSlider;
     
 };
 

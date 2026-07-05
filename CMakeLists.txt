@@ -20,9 +20,12 @@ qt_add_executable(FFEditor
     MediaPlayer.cpp
     MediaLoader.h
     MediaLoader.cpp
-    painter/customSlider.h
+    painter/customVolume.h
     ${RESOURCES}
-    painter/customSlider.cpp
+    painter/customVolume.cpp
+    painter/customTimeLine.h
+    painter/customTimeLine.cpp
+
 )
 
 target_link_libraries(FFEditor

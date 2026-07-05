@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "MediaPlayer.h"
 #include "MediaLoader.h"
-#include "painter/customSlider.h"
+#include "painter/customVolume.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -55,8 +55,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     pauseBtn->show();
 
     // Volume songs
-    volumeSlider = new CustomSlider(this);
-    connect(volumeSlider, &CustomSlider::valueChanged, player, &MediaPlayer::setVolume);
+    volumeSlider = new CustomVolume(this);
+    connect(volumeSlider, &CustomVolume::valueChanged, player, &MediaPlayer::setVolume);
 
     volumeSlider->setValue(50);
 
