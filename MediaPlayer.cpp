@@ -22,7 +22,9 @@ MediaPlayer::MediaPlayer(QObject *parent)
     m_player->setVideoOutput(m_videoWidget);
     m_player->setAudioOutput(m_audioOutput);
 
-    connect(m_player, &QMediaPlayer::positionChanged, this, &MediaPlayer::onInternalPositionChanged);
+    connect(m_player, &QMediaPlayer::positionChanged, this, &MediaPlayer::positionChanged);
+    connect(m_player, &QMediaPlayer::durationChanged, this, &MediaPlayer::durationChanged);
+
     // connect(player, &QMediaPlayer::mediaStatusChanged, this, &MediaPlayer::HandleMediaStatus);
 }
 
@@ -49,11 +51,6 @@ void MediaPlayer::loadVideo(const QString &path)
         m_player->setSource(url);  
         m_player->play();
     }  
-}
-
-void MediaPlayer::onInternalPositionChanged(qint64 pos)
-{
-    emit positionChanged(pos, m_player->duration());
 }
 
 void MediaPlayer::onPositionChanged(qint64 pos)

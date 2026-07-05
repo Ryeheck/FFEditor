@@ -27,10 +27,17 @@ public:
         setPalette(pal);
     };
 
-    void onPositionChanged(qint64 pos, qint64 duration)
-    {
+    void setDuration(qint64 duration) 
+    {  
         if (duration <= 0) return;
+
         m_duration = duration;
+        update();  
+    }
+
+    void onPositionChanged(qint64 pos)
+    {
+        if (m_duration <= 0) return;
 
         m_widthRect = ((qreal)pos * width()) / m_duration;
         update();
@@ -54,7 +61,7 @@ protected:
         // posInWidget = qBound(0.0, posInWidget, 1.0);
         qint64 pos = (qint64)(posInWidget * m_duration);
         
-        onPositionChanged(pos, m_duration);
+        onPositionChanged(pos);
         emit positionChanged(pos);
     };
     
