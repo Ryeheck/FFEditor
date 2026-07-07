@@ -11,6 +11,17 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 qt_standard_project_setup()
 
 qt_add_resources(RESOURCES "resources.qrc")
+
+
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(FFMPEG REQUIRED 
+    libavcodec
+    libavformat
+    libavutil
+    libswscale
+)
+
 qt_add_executable(FFEditor
     WIN32 MACOSX_BUNDLE
     ${RESOURCES}
@@ -27,25 +38,6 @@ qt_add_executable(FFEditor
 
 )
 
-find_package(PkgConfig REQUIRED)
-
-pkg_check_modules(AVCODEC REQUIRED libavcodec)
-pkg_check_modules(AVFORMAT REQUIRED libavformat)
-pkg_check_modules(AVUTIL REQUIRED libavutil)
-pkg_check_modules(SWSCALE REQUIRED libswscale)
-
-target_link_libraries(FFEditor
-    PRIVATE
-        Qt::Core
-        Qt::Widgets
-        Qt::Multimedia
-        Qt::MultimediaWidgets
-        ${AVCODEC_LIBRARIES} 
-        ${AVFORMAT_LIBRARIES} 
-        ${AVUTIL_LIBRARIES}
-        ${SWSCALE_LIBRARIES}
-)
-
 include(GNUInstallDirs)
 
 install(TARGETS FFEditor
@@ -54,7 +46,15 @@ install(TARGETS FFEditor
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-target_include_directories(FFEditor PRIVATE ${AVCODEC_INCLUDE_DIRS})
+target_include_directories(FFEditor PRIVATE ${FFMPEG_INCLUDE_DIRS})
+target_link_libraries(FFEditor
+    PRIVATE
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::Multimedia
+        Qt6::MultimediaWidgets
+        ${FFMPEG_LIBRARIES}
+)
 
 qt_generate_deploy_app_script(
     TARGET FFEditor

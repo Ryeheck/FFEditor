@@ -28,6 +28,8 @@ public:
     void playVideo()  {  m_player->play();  };
     void pauseVideo();
     
+    bool loadFrame(const char *filename, int &width, int &height);
+
     ~MediaPlayer() override;
 
 private slots:
