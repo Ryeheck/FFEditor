@@ -2,6 +2,7 @@ extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/avutil.h"
+#include "libswscale/swscale.h"
 }
 
 #include "MediaPlayer.h"
@@ -13,7 +14,7 @@ extern "C" {
 #include <QDebug>
 #include <QDropEvent>
 #include <QMimeData>
-#include <QSlider>
+#include <QImage>
 
 MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
@@ -120,10 +121,9 @@ bool MediaPlayer::loadFrame(const char *filename, int &width, int &height)
             
             if (avcodec_receive_frame(codecContext, frame) == 0) {
                 // FRAME LOAD
-                
-                width = frame->width;
-                height = frame->height;
+                QImage image = renderFrame(frame);
 
+                av_frame_unref(frame);
             }
         }
     }
@@ -136,6 +136,26 @@ bool MediaPlayer::loadFrame(const char *filename, int &width, int &height)
 
     return true;
 }
+
+QImage MediaPlayer::renderFrame(AVFrame *frame)
+{
+    SwsContext *swsCtx = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
+                                        frame->width, frame->height, AV_PIX_FMT_RGB32,
+                                        SWS_BILINEAR, NULL, NULL, NULL);
+    
+    QImage image(frame->width, frame->height, QImage::Format_RGB32);
+
+    uint8_t *data[4] {image.bits(), NULL, NULL, NULL};
+    int dataLinesize[4] {(int)image.bytesPerLine(), 0, 0, 0};
+
+    sws_scale(swsCtx, frame->data, frame->linesize, 0, frame->height, data, dataLinesize);
+
+    sws_free_context(&swsCtx);
+
+    return image;
+}
+
+
 
 MediaPlayer::~MediaPlayer()
 {

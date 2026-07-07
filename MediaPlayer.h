@@ -1,11 +1,16 @@
 #ifndef MEDIAPLAYER_H
 #define MEDIAPLAYER_H
 
+extern "C" {
+#include "libavcodec/avcodec.h"
+
+}
+
 #include <QMediaPlayer>
 #include <QWidget>
 #include <QVideoWidget>
 #include <QAudioOutput>
-#include <QSlider>
+#include <QImage>
 
 class MediaPlayer : public QObject
 {
@@ -29,6 +34,7 @@ public:
     void pauseVideo();
     
     bool loadFrame(const char *filename, int &width, int &height);
+    QImage renderFrame(AVFrame *frame);
 
     ~MediaPlayer() override;
 
