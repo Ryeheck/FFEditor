@@ -3,7 +3,6 @@
 
 extern "C" {
 #include "libavcodec/avcodec.h"
-
 }
 
 #include <QMediaPlayer>
@@ -11,6 +10,7 @@ extern "C" {
 #include <QVideoWidget>
 #include <QAudioOutput>
 #include <QImage>
+#include <QVideoSink>
 
 class MediaPlayer : public QObject
 {
@@ -33,8 +33,9 @@ public:
     void playVideo()  {  m_player->play();  };
     void pauseVideo();
     
+    void sentToSink(QImage &image, QVideoSink *sink);
     bool loadFrame(const char *filename, int &width, int &height);
-    QImage renderFrame(AVFrame *frame);
+    QImage renderFrame(AVFrame *frame, AVCodecContext *codecContext);
 
     ~MediaPlayer() override;
 
@@ -45,7 +46,7 @@ private:
     QMediaPlayer *m_player;
     QVideoWidget *m_videoWidget;
     QAudioOutput *m_audioOutput;
-
+    QVideoSink   *sink;
 };
 
 #endif // MEDIAPLAYER_H

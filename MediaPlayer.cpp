@@ -3,6 +3,7 @@ extern "C" {
 #include "libavformat/avformat.h"
 #include "libavutil/avutil.h"
 #include "libswscale/swscale.h"
+// #include "libavutil/imgutils.h"
 }
 
 #include "MediaPlayer.h"
@@ -15,23 +16,23 @@ extern "C" {
 #include <QDropEvent>
 #include <QMimeData>
 #include <QImage>
+#include <QVideoSink>
+#include <QVideoFrameFormat>
+#include <QVideoFrame>
 
 MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
 {
     m_player = new QMediaPlayer(this);
     m_audioOutput = new QAudioOutput(this);
-
+   
     m_videoWidget = new QVideoWidget();
     m_videoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_videoWidget->setMinimumSize(400, 300);
+    sink = m_videoWidget->videoSink();
 
     m_player->setVideoOutput(m_videoWidget);
     m_player->setAudioOutput(m_audioOutput);
-
-    int w = 1920;
-    int h = 1080;
-    bool n = loadFrame("/home/ryabi/Видео/output.mp4", w, h);
 
     connect(m_player, &QMediaPlayer::positionChanged, this, &MediaPlayer::positionChanged);
     connect(m_player, &QMediaPlayer::durationChanged, this, &MediaPlayer::durationChanged);
@@ -113,23 +114,29 @@ bool MediaPlayer::loadFrame(const char *filename, int &width, int &height)
     AVFrame *frame = av_frame_alloc();
     AVPacket *packet = av_packet_alloc();
 
-    bool foundFrame = false;
+    int i = 0;
     while (av_read_frame(formatContext, packet) >= 0)
     {
         if (packet->stream_index == videoStreamIndex) {
-            avcodec_send_packet(codecContext, packet);
-            
-            if (avcodec_receive_frame(codecContext, frame) == 0) {
-                // FRAME LOAD
-                QImage image = renderFrame(frame);
+            if (avcodec_send_packet(codecContext, packet) == 0) {
+                while (avcodec_receive_frame(codecContext, frame) == 0) {
+                    // FRAME LOAD
 
-                av_frame_unref(frame);
-            }
+                    QImage image = renderFrame(frame, codecContext);
+
+                    sentToSink(image, sink);
+
+                    av_frame_unref(frame);
+                }
+            } else
+                qDebug() << "Couldn't send packet";
         }
+        av_packet_unref(packet);
     }
 
     // Free and close video file
     avformat_close_input(&formatContext);
+    avformat_free_context(formatContext);
     avcodec_free_context(&codecContext);
     av_frame_free(&frame);
     av_packet_free(&packet);
@@ -137,25 +144,40 @@ bool MediaPlayer::loadFrame(const char *filename, int &width, int &height)
     return true;
 }
 
-QImage MediaPlayer::renderFrame(AVFrame *frame)
+QImage MediaPlayer::renderFrame(AVFrame *frame, AVCodecContext *codecCntx)
 {
     SwsContext *swsCtx = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
-                                        frame->width, frame->height, AV_PIX_FMT_RGB32,
+                                        frame->width, frame->height, AV_PIX_FMT_RGBA,
                                         SWS_BILINEAR, NULL, NULL, NULL);
-    
-    QImage image(frame->width, frame->height, QImage::Format_RGB32);
+    if (swsCtx)  return QImage();
 
-    uint8_t *data[4] {image.bits(), NULL, NULL, NULL};
-    int dataLinesize[4] {(int)image.bytesPerLine(), 0, 0, 0};
+    // Memory allocation different from ffmpeg
+    // frame->height + 1
+    QImage image(frame->width, frame->height + 1, QImage::Format_RGBA8888);
 
-    sws_scale(swsCtx, frame->data, frame->linesize, 0, frame->height, data, dataLinesize);
+    uint8_t *dest[4] {image.bits(), nullptr, nullptr, nullptr};
+    int destLinesize[4] {static_cast<int>(image.bytesPerLine()), 0, 0, 0};
 
-    sws_free_context(&swsCtx);
+    sws_scale(swsCtx, frame->data, frame->linesize, 0, frame->height, dest, destLinesize);
+
+    sws_freeContext(swsCtx);
 
     return image;
 }
 
+void MediaPlayer::sentToSink(QImage &image, QVideoSink *sink)
+{
+    QVideoFrameFormat format(image.size(), QVideoFrameFormat::Format_RGBA8888);
 
+    QVideoFrame frame(format);
+
+    if (frame.map(QVideoFrame::WriteOnly)) {
+        memcpy(frame.bits(0), image.constBits(), image.sizeInBytes());
+
+        frame.unmap();
+        sink->setVideoFrame(frame);
+    }
+}
 
 MediaPlayer::~MediaPlayer()
 {

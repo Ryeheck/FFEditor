@@ -19,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     MainLayout = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
 
-    player = new MediaPlayer();
+    player = new MediaPlayer(this);
     player->getVideoWidget()->installEventFilter(this);
     player->getVideoWidget()->setAcceptDrops(true);
 
@@ -32,7 +32,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     });
     
     QToolButton *startBtn = new QToolButton(this);
-    connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
+    connect(startBtn, &QToolButton::clicked, this, [this] () {
+        int w = 1920, h = 1080;
+        loader->show();
+        player->loadFrame("/home/ryabi/Видео/output.mp4", w, h);
+    });
 
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     startBtn->setIcon(QIcon(":/icons/iconStart2.png"));
