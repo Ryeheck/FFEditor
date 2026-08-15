@@ -1,5 +1,5 @@
-#ifndef CUSTOMTIMELINE_H
-#define CUSTOMTIMELINE_H
+#ifndef CUSTOMPLAYHEAD_H
+#define CUSTOMPLAYHEAD_H
 
 #include <QWidget>
 #include <QPainter>
@@ -66,4 +66,4 @@ protected:
     };
     
 };
-#endif // CUSTOMTIMELINE_H
+#endif // CUSTOMPLAYHEAD_H

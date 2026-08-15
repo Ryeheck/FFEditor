@@ -1,6 +1,7 @@
 #include <QImage>
 #include <QString>
 #include <QDebug>
+#include <QThread>
 
 #include "decoder.h"
 
@@ -12,9 +13,15 @@ extern "C" {
 #include "libavutil/imgutils.h"
 }
 
+decoder::decoder(QObject *parent) : QObject(parent)
+{
+
+}
 
 void decoder::processVideo(const QString &filename, int width, int height)
 {
+    m_running = true;
+
     // Open video file
     AVFormatContext *formatContext = avformat_alloc_context();
     if (avformat_open_input(&formatContext, filename.toUtf8().constData(), NULL, NULL) != 0) {
@@ -23,7 +30,14 @@ void decoder::processVideo(const QString &filename, int width, int height)
     }
 
     // Current video stream
-    int videoStreamIndex = av_find_best_stream(formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, -1);
+    int videoStreamIndex = -1;
+    for (int i = 0; i < formatContext->nb_streams; ++i)
+    {
+        if(formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            videoStreamIndex = i;
+            break;
+        }
+    }
 
     // Not video stream
     if (videoStreamIndex == -1) {
@@ -43,24 +57,25 @@ void decoder::processVideo(const QString &filename, int width, int height)
 
     prepareBuffer(width, height);
 
-    while (av_read_frame(formatContext, packet) >= 0)
+    while (av_read_frame(formatContext, packet) >= 0 && m_running)
     {
         if (packet->stream_index != videoStreamIndex) {
             av_packet_unref(packet);
-            qDebug() << "Not correct video stream";
             continue;
         }
         if (avcodec_send_packet(codecContext, packet) != 0) {
             av_packet_unref(packet);
-            qDebug() << "Couldn't send packet";
             continue;
         }
              
-        while (avcodec_receive_frame(codecContext, frame) == 0) // FRAME LOAD
+        while (avcodec_receive_frame(codecContext, frame) == 0 && m_running) // FRAME LOAD
         {  
-            QImage image = renderFrame(frame);
+            QImage renderedFrame = renderFrame(frame);
 
-            emit frameDecoded(image);
+            if (!renderedFrame.isNull())
+                emit frameDecoded(renderedFrame);
+
+            // QThread::msleep(33); // FPS on active video
 
             av_frame_unref(frame);
         }
@@ -77,6 +92,13 @@ void decoder::processVideo(const QString &filename, int width, int height)
 
 QImage decoder::renderFrame(AVFrame *frame)
 {
+    swsCtx = sws_getCachedContext(
+        swsCtx, 
+        frame->width, frame->height, (AVPixelFormat)frame->format,
+        frame->width, frame->height, AV_PIX_FMT_RGB32,
+        SWS_BICUBIC, NULL, NULL, NULL
+    );
+
     if (!swsCtx) {
         qDebug() << "Failed to create sws context";
         return QImage();
@@ -97,11 +119,9 @@ QImage decoder::renderFrame(AVFrame *frame)
 void decoder::prepareBuffer(int &width, int &height)
 {
     m_bufferLinesize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, width, height, 32);
-    m_buffer = (uint8_t *)av_malloc(m_bufferLinesize);
 
-    swsCtx = sws_getContext(width, height, AV_PIX_FMT_YUV420P,
-                            width, height, AV_PIX_FMT_RGB32,
-                            SWS_BICUBIC, NULL, NULL, NULL);
+    if (m_buffer)  av_free(m_buffer);
+    m_buffer = (uint8_t *)av_malloc(m_bufferLinesize);
 }
 
 decoder::~decoder()

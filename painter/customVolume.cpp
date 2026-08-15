@@ -1,9 +1,9 @@
-#include "customVolume.h"
-
 #include <QWidget>
 #include <QPainter>
 #include <QMouseEvent>
 #include <QPainterPath>
+
+#include "customVolume.h"
 
 CustomVolume::CustomVolume(QWidget *parent)
     : QWidget(parent)

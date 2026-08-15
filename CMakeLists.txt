@@ -28,13 +28,16 @@ qt_add_executable(FFEditor
     main.cpp
     mainwindow.h
     mainwindow.cpp
-    MediaPlayer.h
-    MediaPlayer.cpp
+    
     MediaLoader.h
     MediaLoader.cpp
     painter/customVolume.h
     painter/customVolume.cpp
     painter/customPlayhead.hpp
+    player/MediaPlayer.h
+    player/MediaPlayer.cpp
+    player/decoder.h
+    player/decoder.cpp
 
 )
 

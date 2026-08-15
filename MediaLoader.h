@@ -6,7 +6,6 @@
 #include <QPushButton>
 #include <QListWidget>
 #include <QTabWidget>
-#include <QLabel>
 #include <QDialog>
 
 class MediaLoader : public QDialog

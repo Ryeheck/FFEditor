@@ -1,9 +1,3 @@
-#include "mainwindow.h"
-#include "MediaPlayer.h"
-#include "MediaLoader.h"
-#include "painter/customVolume.h"
-#include "painter/customPlayhead.hpp"
-
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDropEvent>
@@ -11,7 +5,12 @@
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QToolButton>
-#include <QSlider>
+
+#include "mainwindow.h"
+#include "MediaLoader.h"
+#include "painter/customVolume.h"
+#include "painter/customPlayhead.hpp"
+#include "player/MediaPlayer.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -28,14 +27,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     loader = new MediaLoader(this);
     connect(loader, &MediaLoader::startPlayRequested, this, [this] (const QString &path) {
         player->loadVideo(path);
+
         loader->hide();
     });
     
     QToolButton *startBtn = new QToolButton(this);
     connect(startBtn, &QToolButton::clicked, this, [this] () {
-        int w = 1920, h = 1080;
         loader->show();
-        player->loadFrame("/home/ryabi/Видео/output.mp4", w, h);
     });
 
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -44,7 +42,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     startBtn->show();
     
     QToolButton *stopBtn = new QToolButton(this);
-    connect(stopBtn, &QToolButton::clicked, player, &MediaPlayer::stopVideo);
+    connect(stopBtn, &QToolButton::clicked, player, &MediaPlayer::stop);
     
     stopBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     stopBtn->setIcon(QIcon(/* Icon */));
@@ -52,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     stopBtn->show();
     
     QToolButton *pauseBtn = new QToolButton(this);
-    connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::pauseVideo);
+    connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::pause);
 
     pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     pauseBtn->setIcon(QIcon(/* Icon */));
@@ -98,7 +96,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
             const QList<QUrl> urls = dropEvent->mimeData()->urls();
-            player->loadVideo(urls.first());
+            // player->loadVideo(urls.first());                                                 !!!!!!!!!!!!!!!!!!!!!!!
             return true;
         }
     }

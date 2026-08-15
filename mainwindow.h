@@ -1,13 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "MediaPlayer.h"
+#include <QMainWindow>
+#include <QVBoxLayout>
+
 #include "MediaLoader.h"
 #include "painter/customVolume.h"
 #include "painter/customPlayhead.hpp"
-
-#include <QMainWindow>
-#include <QVBoxLayout>
+#include "player/MediaPlayer.h"
 
 class MainWindow : public QMainWindow
 {
