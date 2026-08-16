@@ -83,12 +83,10 @@ cleanup:
 
 void decoder::processVideo()
 {
-    m_running = true;
-
     AVFrame *frame = av_frame_alloc();
     AVPacket *packet = av_packet_alloc();
 
-    while (av_read_frame(m_formatContext, packet) >= 0 && m_running)
+    while (av_read_frame(m_formatContext, packet) >= 0)
     {
         if (packet->stream_index != m_videoStreamIndex) {
             av_packet_unref(packet);
@@ -99,7 +97,7 @@ void decoder::processVideo()
             continue;
         }
              
-        while (avcodec_receive_frame(m_codecContext, frame) == 0 && m_running) // FRAME LOAD
+        while (avcodec_receive_frame(m_codecContext, frame) == 0) // FRAME LOAD
         {  
             QImage renderedFrame = renderFrame(frame);
 

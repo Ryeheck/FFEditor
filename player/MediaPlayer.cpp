@@ -36,7 +36,6 @@ void MediaPlayer::loadVideo(const QString &path)
         if (m_decoder->loadSource(path))
             m_decoderThread.start();
     }
-        
 }
 
 void MediaPlayer::play()
@@ -48,7 +47,7 @@ void MediaPlayer::play()
 void MediaPlayer::stop()
 {
     if (m_decoderThread.isRunning())
-        QMetaObject::invokeMethod(m_decoder, "stop", Qt::QueuedConnection);
+        // QMetaObject::invokeMethod(m_decoder, &decoder::stop, Qt::QueuedConnection);
 }
 
 void MediaPlayer::onPositionChanged(qint64 pos)

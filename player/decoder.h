@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QImage>
+#include <atomic>
 
 extern "C" {
 #include "libavformat/avformat.h"
@@ -21,10 +22,6 @@ signals:
 public:
     explicit decoder(QObject *parent = nullptr);
 
-    
-    void stop() {  m_running = false;  };
-    void play() {  m_running = true;   };
-
     ~decoder() override;
 
 public slots:
@@ -34,7 +31,6 @@ public slots:
 private:
     QImage renderFrame(AVFrame *frame);
     
-
     AVCodecContext *m_codecContext   = nullptr;
     AVFormatContext *m_formatContext = nullptr;
     SwsContext *m_swsCtx             = nullptr;
@@ -43,9 +39,6 @@ private:
 
     int m_videoStreamIndex = -1;
     int m_bufferLinesize   = 0;
-    
-    bool m_running = false;
-
     
 };
 
