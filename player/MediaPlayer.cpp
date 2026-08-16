@@ -83,5 +83,6 @@ void MediaPlayer::sentToSink(const QImage &image)
 
 MediaPlayer::~MediaPlayer()
 {
+    
     qDebug() << "ok";
 }

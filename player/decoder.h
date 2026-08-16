@@ -29,7 +29,6 @@ public:
 
 private:
     QImage renderFrame(AVFrame *frame);
-    void prepareBuffer(int &width, int &height);
 
     SwsContext *swsCtx = nullptr;
     uint8_t *m_buffer = nullptr;

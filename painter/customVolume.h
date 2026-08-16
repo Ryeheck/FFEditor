@@ -17,7 +17,7 @@ public:
     int value() const {  return m_value;  };
 protected:
     void paintEvent(QPaintEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *mouse) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
     
 };
 

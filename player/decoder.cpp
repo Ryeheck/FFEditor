@@ -55,8 +55,6 @@ void decoder::processVideo(const QString &filename, int width, int height)
     AVFrame *frame = av_frame_alloc();
     AVPacket *packet = av_packet_alloc();
 
-    prepareBuffer(width, height);
-
     while (av_read_frame(formatContext, packet) >= 0 && m_running)
     {
         if (packet->stream_index != videoStreamIndex) {
@@ -92,6 +90,16 @@ void decoder::processVideo(const QString &filename, int width, int height)
 
 QImage decoder::renderFrame(AVFrame *frame)
 {
+    int align = 32;
+    int requestedSize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, frame->width, frame->height, align);
+
+    if (!m_buffer || requestedSize > m_bufferLinesize) {
+        if (m_buffer)  av_free(m_buffer);
+        
+        m_bufferLinesize = requestedSize;
+        m_buffer = (uint8_t *)av_malloc(m_bufferLinesize);
+    }
+    
     swsCtx = sws_getCachedContext(
         swsCtx, 
         frame->width, frame->height, (AVPixelFormat)frame->format,
@@ -105,29 +113,27 @@ QImage decoder::renderFrame(AVFrame *frame)
     }
 
     uint8_t *dest[4]    = {m_buffer, nullptr, nullptr, nullptr};
-    int destLinesize[4] = {frame->width * 4, 0, 0, 0}; // 4 bytes for pixel
+    int linesize        = FFALIGN(frame->width * 4, align);
+    int destLinesize[4] = {linesize, 0, 0, 0}; // 4 bytes + align for pixel
 
     if (sws_scale(swsCtx, frame->data, frame->linesize, 0, frame->height, dest, destLinesize) != frame->height) {
         qDebug() << "Error changing frame color range";
         return QImage();
     }
 
-    return QImage(m_buffer, frame->width, frame->height, destLinesize[0], QImage::Format_RGB32);
-}
-
-
-void decoder::prepareBuffer(int &width, int &height)
-{
-    m_bufferLinesize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, width, height, 32);
-
-    if (m_buffer)  av_free(m_buffer);
-    m_buffer = (uint8_t *)av_malloc(m_bufferLinesize);
+    return QImage(m_buffer, frame->width, frame->height, linesize, QImage::Format_RGB32).copy();
 }
 
 decoder::~decoder()
 {
-    if (m_buffer)  av_free(m_buffer);
-    if (swsCtx)    sws_freeContext(swsCtx);
+    if (m_buffer) {
+        av_free(m_buffer);
+        m_buffer = nullptr;
+    }
+    if (swsCtx) {
+        sws_freeContext(swsCtx);
+        swsCtx = nullptr;
+    }
 
     qDebug() << "ok";
 }
