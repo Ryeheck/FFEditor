@@ -107,5 +107,5 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 MainWindow::~MainWindow()
 {
-    qDebug() << "ok";
+    qDebug() << "MainWindow: ok";
 }

@@ -27,19 +27,16 @@ MediaPlayer::MediaPlayer(QObject *parent)
 
     connect(m_decoder, &decoder::finished, &m_decoderThread, &QThread::quit);
     connect(m_decoder, &decoder::finished, m_decoder, &QObject::deleteLater);
-
+    connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
 }
 
 void MediaPlayer::loadVideo(const QString &path) 
 {  
-    int width = m_videoWidget->width();
-    int height = m_videoWidget->height();
-
-    connect(&m_decoderThread, &QThread::started, m_decoder, [this, path, width, height] () {
-            m_decoder->processVideo(path, width, height);
-    });  
-    if (!m_decoderThread.isRunning())
-        m_decoderThread.start();
+    if (!m_decoderThread.isRunning()) {
+        if (m_decoder->loadSource(path))
+            m_decoderThread.start();
+    }
+        
 }
 
 void MediaPlayer::play()
@@ -83,6 +80,6 @@ void MediaPlayer::sentToSink(const QImage &image)
 
 MediaPlayer::~MediaPlayer()
 {
-    
-    qDebug() << "ok";
+
+    qDebug() << "MediaPlayer: ok";
 }
