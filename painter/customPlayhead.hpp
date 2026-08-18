@@ -10,10 +10,10 @@ class CustomPlayhead : public QWidget
 {
     Q_OBJECT
     qreal m_widthRect = 0;
-    qreal m_duration = 0;
+    qreal m_durationMs = 0;
 
 signals:
-    void positionChanged(qint64 pos);
+    void positionChanged(qint64 posMs);
 
 public:
     CustomPlayhead(QWidget *parent = nullptr) 
@@ -27,19 +27,19 @@ public:
         setPalette(pal);
     };
 
-    void setDuration(qint64 duration) 
+    void setDuration(qint64 durationMs) 
     {  
-        if (duration <= 0) return;
+        if (durationMs <= 0) return;
 
-        m_duration = duration;
+        m_durationMs = durationMs;
         update();  
     }
 
-    void onPositionChanged(qint64 pos)
+    void onPositionChanged(qint64 posMs)
     {
-        if (m_duration <= 0) return;
+        if (m_durationMs <= 0) return;
 
-        m_widthRect = ((qreal)pos * width()) / m_duration;
+        m_widthRect = ((qreal)posMs * width()) / m_durationMs;
         update();
     };
 
@@ -59,10 +59,10 @@ protected:
     {
         qreal posInWidget = (qreal)event->pos().x() / width();
         // posInWidget = qBound(0.0, posInWidget, 1.0);
-        qint64 pos = (qint64)(posInWidget * m_duration);
+        qint64 posMs = (qint64)(posInWidget * m_durationMs);
         
-        onPositionChanged(pos);
-        emit positionChanged(pos);
+        onPositionChanged(posMs);
+        emit positionChanged(posMs);
     };
     
 };

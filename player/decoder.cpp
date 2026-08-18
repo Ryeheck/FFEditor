@@ -2,6 +2,7 @@
 #include <QString>
 #include <QDebug>
 #include <QThread>
+#include <atomic>
 
 #include "decoder.h"
 
@@ -50,6 +51,19 @@ bool decoder::loadSource(const QString &filename)
         goto cleanup;
     }
 
+    // find stream info
+    if (avformat_find_stream_info(m_formatContext, NULL) != 0) {
+        qDebug() << "Couldn't find stream info";
+        goto cleanup;
+    }
+
+    // Send duration in UI
+    if (m_formatContext->duration != AV_NOPTS_VALUE) {
+        qint64 durationMs = (m_formatContext->duration * 1000) / AV_TIME_BASE;
+
+        emit durationChanged(durationMs);
+    }
+
     // Open codecs
     codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
     codec = avcodec_find_decoder(codecParams->codec_id);
@@ -67,7 +81,7 @@ bool decoder::loadSource(const QString &filename)
         qDebug() << "Couldn't open codec";
         goto cleanup;
     }
-    
+
     return true;
 
 cleanup:
@@ -83,11 +97,22 @@ cleanup:
 
 void decoder::processVideo()
 {
+    m_running.store(true);
+
     AVFrame *frame = av_frame_alloc();
     AVPacket *packet = av_packet_alloc();
 
-    while (av_read_frame(m_formatContext, packet) >= 0)
+    while (m_running.load()) 
     {
+
+        if (m_seekReq.exchange(false)) {
+            seekTo(m_seekTargetMs.load());
+            continue;
+        }
+
+        int ret = av_read_frame(m_formatContext, packet);
+        if (ret < 0) break;
+
         if (packet->stream_index != m_videoStreamIndex) {
             av_packet_unref(packet);
             continue;
@@ -96,22 +121,35 @@ void decoder::processVideo()
             av_packet_unref(packet);
             continue;
         }
-             
+                
         while (avcodec_receive_frame(m_codecContext, frame) == 0) // FRAME LOAD
         {  
+            qint64 posMs = getFramePosMs(frame);
+            if (m_isSeeking) {
+                if (posMs < m_seekTargetMs) {
+                    av_frame_unref(frame);
+                    continue;
+                } else {
+                    m_isSeeking.store(false);
+                }
+            }
+            
             QImage renderedFrame = renderFrame(frame);
-
-            if (!renderedFrame.isNull())
-                emit frameDecoded(renderedFrame);
+            
+            emit positionChanged(posMs);
+            emit frameDecoded(renderedFrame);
 
             av_frame_unref(frame);
         }
         av_packet_unref(packet);
+        
     }
 
     // Free
     av_frame_free(&frame);
     av_packet_free(&packet);
+
+    emit finished();
 }
 
 QImage decoder::renderFrame(AVFrame *frame)
@@ -148,6 +186,81 @@ QImage decoder::renderFrame(AVFrame *frame)
     }
 
     return QImage(m_buffer, frame->width, frame->height, linesize, QImage::Format_RGB32).copy();
+}
+
+void decoder::seek(double posMs)
+{
+    m_seekReq.store(true);
+    m_seekTargetMs.store(posMs);
+}
+
+void decoder::seekTo(double posMs)
+{
+    if (!m_formatContext || !m_codecContext || m_videoStreamIndex < 0) {
+        qDebug() << "seekTo: Not a video";
+        return;
+    }
+
+    // Correct stream
+    AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
+
+    // From MS to TS
+    int64_t targetTs = av_rescale_q(posMs, AVRational{1, 1000}, stream->time_base);
+
+    // If there is a start time 
+    if (stream->start_time != AV_NOPTS_VALUE) 
+        targetTs += stream->start_time;
+
+    // Seek
+    int ret = avformat_seek_file(
+        m_formatContext, m_videoStreamIndex,
+        INT64_MIN, targetTs, INT64_MAX,
+        AVSEEK_FLAG_BACKWARD       // 
+    );
+    if (ret < 0) {
+        qDebug() << "Seek error: " << ret;
+        return;
+    }
+
+    // Clear buffers
+    AVFrame *frame = av_frame_alloc();
+    while (avcodec_receive_frame(m_codecContext, frame) == 0)
+    {
+        av_frame_unref(frame);
+    }
+    av_frame_free(&frame); 
+
+    avcodec_flush_buffers(m_codecContext);
+
+    // if (audio)          avcodec_flush_buffers(audio);
+
+    // Flags
+    m_isSeeking.store(true);
+
+}
+
+int64_t decoder::getFramePosMs(const AVFrame *frame) const
+{
+    if (!frame || !m_formatContext || !m_codecContext) {
+        qDebug() << "getFramePosMs: not a frame";
+        return -1;
+    }
+
+    // Presentation Timestamp
+    int64_t pts = frame->best_effort_timestamp;
+    if (pts == AV_NOPTS_VALUE) {
+        qDebug() << "getFramePosMs: not a pts";
+        return -1;
+    }
+
+    AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
+
+    // If there is a start time
+    if (stream->start_time == AV_NOPTS_VALUE)
+        pts -= stream->start_time;
+    
+    // From TS to MS
+    return av_rescale_q(pts, stream->time_base, AVRational{1, 1000});
 }
 
 decoder::~decoder()

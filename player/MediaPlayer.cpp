@@ -28,6 +28,8 @@ MediaPlayer::MediaPlayer(QObject *parent)
     connect(m_decoder, &decoder::finished, &m_decoderThread, &QThread::quit);
     connect(m_decoder, &decoder::finished, m_decoder, &QObject::deleteLater);
     connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
+    connect(m_decoder, &decoder::durationChanged, this, &MediaPlayer::durationChanged);
+    connect(m_decoder, &decoder::positionChanged, this, &MediaPlayer::positionChanged);
 }
 
 void MediaPlayer::loadVideo(const QString &path) 
@@ -46,13 +48,13 @@ void MediaPlayer::play()
 
 void MediaPlayer::stop()
 {
-    if (m_decoderThread.isRunning())
+    if (m_decoderThread.isRunning());
         // QMetaObject::invokeMethod(m_decoder, &decoder::stop, Qt::QueuedConnection);
 }
 
 void MediaPlayer::onPositionChanged(qint64 pos)
 {
-    // m_player->setPosition(pos);
+    m_decoder->seek(pos);
 }
 
 void MediaPlayer::pause() 

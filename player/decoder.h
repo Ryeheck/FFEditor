@@ -18,7 +18,9 @@ class decoder : public QObject
 signals:
     void frameDecoded(const QImage &frame);
     void finished();
-
+    void durationChanged(qint64 durationMs);
+    void positionChanged(qint64 posMs);
+    
 public:
     explicit decoder(QObject *parent = nullptr);
 
@@ -27,8 +29,11 @@ public:
 public slots:
     void processVideo();
     bool loadSource(const QString &filename);
+    void seek(double posMs);
 
 private:
+    int64_t getFramePosMs(const AVFrame *frame) const;
+    void seekTo(double posMs);
     QImage renderFrame(AVFrame *frame);
     
     AVCodecContext *m_codecContext   = nullptr;
@@ -36,6 +41,11 @@ private:
     SwsContext *m_swsCtx             = nullptr;
     
     uint8_t *m_buffer = nullptr;
+
+    std::atomic<bool> m_running{false};
+    std::atomic<bool> m_seekReq{false};
+    std::atomic<double> m_seekTargetMs{0};
+    std::atomic<bool> m_isSeeking{false};
 
     int m_videoStreamIndex = -1;
     int m_bufferLinesize   = 0;

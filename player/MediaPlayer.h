@@ -28,7 +28,7 @@ public:
     QVideoWidget *getVideoWidget() {  return m_videoWidget;  };
     void setVolume(float value) {  m_audioOutput->setVolume(value);  };
 
-    void onPositionChanged(qint64 pos);
+    
     void loadVideo(const QString &path);
     
     void pause();
@@ -39,6 +39,7 @@ public:
 
 public slots:
     void sentToSink(const QImage &frame);
+    void onPositionChanged(qint64 pos);
 
 private slots:
 
