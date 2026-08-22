@@ -141,9 +141,6 @@ void decoder::processVideo()
                 av_frame_unref(frame);
                 break;
             }
-            
-            emit positionChanged(posMs);
-
             av_frame_unref(frame);
         }
         av_packet_unref(packet);

@@ -1,11 +1,6 @@
-#include <QVideoWidget>
 #include <QAudioOutput>
 #include <QDebug>
 #include <QImage>
-#include <QVideoSink>
-#include <QVideoFrameFormat>
-#include <QVideoFrame>
-#include <QMetaObject>
 #include <QTimer>
 
 #include "videoWidget.h"
@@ -33,6 +28,8 @@ void MediaPlayer::processNextFrame()
     if (m_decoder->getNextFrame(vFrame)) {
         
         m_videoWidget->setFrame(vFrame.frame);
+
+        positionChanged(vFrame.posMs);
     }
 }
 
@@ -48,14 +45,13 @@ bool MediaPlayer::initDecoder()
     connect(m_decoder, &decoder::finished, &m_decoderThread, &QThread::quit);
     connect(m_decoder, &decoder::finished, m_decoder, &QObject::deleteLater);
     
-    connect(m_decoder, &decoder::frameDecoded, this, &MediaPlayer::sentToSink);
     connect(m_decoder, &decoder::durationChanged, this, &MediaPlayer::durationChanged);
-    connect(m_decoder, &decoder::positionChanged, this, &MediaPlayer::positionChanged);
 
     connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
 
     m_renderTimer = new QTimer(this);
     connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
+    connect(m_decoder, &decoder::finished, m_renderTimer, &QTimer::stop);
     
     m_renderTimer->start(16);
 
