@@ -19,8 +19,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     setCentralWidget(centralWidget);
 
     player = new MediaPlayer(this);
-    player->getVideoWidget()->installEventFilter(this);
-    player->getVideoWidget()->setAcceptDrops(true);
+    //player->getVideoWidget()->installEventFilter(this);
+    //player->getVideoWidget()->setAcceptDrops(true);
 
     MainLayout->addWidget(player->getVideoWidget());
 

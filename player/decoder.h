@@ -8,23 +8,24 @@
 extern "C" {
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
-#include "libswscale/swscale.h"
 }
+
+#include "frameQueue.hpp"
 
 class decoder : public QObject
 {
     Q_OBJECT
 
 signals:
-    void frameDecoded(const QImage &frame);
     void finished();
     void durationChanged(qint64 durationMs);
     void positionChanged(qint64 posMs);
     
 public:
     explicit decoder(QObject *parent = nullptr);
-
     ~decoder() override;
+
+    bool getNextFrame(videoFrame &vFrame);
 
 public slots:
     void processVideo();
@@ -32,15 +33,14 @@ public slots:
     void seek(double posMs);
 
 private:
+    AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame) const;
     void seekTo(double posMs);
-    QImage renderFrame(AVFrame *frame);
 
     AVCodecContext *m_codecContext   = nullptr;
     AVFormatContext *m_formatContext = nullptr;
-    SwsContext *m_swsCtx             = nullptr;
-    
-    uint8_t *m_buffer = nullptr;
+
+    frameQueue m_frameQueue;
 
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_seekReq{false};
@@ -48,7 +48,6 @@ private:
     std::atomic<bool> m_isSeeking{false};
 
     int m_videoStreamIndex = -1;
-    int m_bufferLinesize   = 0;
 };
 
 #endif // DECODER_H

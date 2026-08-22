@@ -38,7 +38,9 @@ qt_add_executable(FFEditor
     player/MediaPlayer.cpp
     player/decoder.h
     player/decoder.cpp
-
+    player/frameQueue.hpp
+    player/videoWidget.h
+    player/videoWidget.cpp
 )
 
 include(GNUInstallDirs)

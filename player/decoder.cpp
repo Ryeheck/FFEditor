@@ -5,13 +5,12 @@
 #include <atomic>
 
 #include "decoder.h"
+#include "frameQueue.hpp"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/avutil.h"
-#include "libswscale/swscale.h"
-#include "libavutil/imgutils.h"
 }
 
 decoder::decoder(QObject *parent) : QObject(parent)
@@ -132,11 +131,18 @@ void decoder::processVideo()
                     m_isSeeking.store(false);
                 }
             }
-            
-            QImage renderedFrame = renderFrame(frame);
+            videoFrame vFrame;
+            vFrame.posMs = posMs;
+            vFrame.frame = cloneToSharedPtr(frame);
+
+            // Push frame to queue
+            if (!m_frameQueue.push(vFrame)) {
+                // If queue is full
+                av_frame_unref(frame);
+                break;
+            }
             
             emit positionChanged(posMs);
-            emit frameDecoded(renderedFrame);
 
             av_frame_unref(frame);
         }
@@ -144,47 +150,12 @@ void decoder::processVideo()
         
     }
 
-    // Free
+    // Free and abort queue
     av_frame_free(&frame);
     av_packet_free(&packet);
+    m_frameQueue.abort();
 
     emit finished();
-}
-
-QImage decoder::renderFrame(AVFrame *frame)
-{
-    int align = 32;
-    int requestedSize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, frame->width, frame->height, align);
-
-    if (!m_buffer || requestedSize > m_bufferLinesize) {
-        if (m_buffer)  av_free(m_buffer);
-        
-        m_bufferLinesize = requestedSize;
-        m_buffer = (uint8_t *)av_malloc(m_bufferLinesize);
-    }
-    
-    m_swsCtx = sws_getCachedContext(
-        m_swsCtx, 
-        frame->width, frame->height, (AVPixelFormat)frame->format,
-        frame->width, frame->height, AV_PIX_FMT_RGB32,
-        SWS_BICUBIC, NULL, NULL, NULL
-    );
-
-    if (!m_swsCtx) {
-        qDebug() << "Failed to create sws context";
-        return QImage();
-    }
-
-    uint8_t *dest[4]    = {m_buffer, nullptr, nullptr, nullptr};
-    int linesize        = FFALIGN(frame->width * 4, align);
-    int destLinesize[4] = {linesize, 0, 0, 0}; // 4 bytes + align for pixel
-
-    if (sws_scale(m_swsCtx, frame->data, frame->linesize, 0, frame->height, dest, destLinesize) != frame->height) {
-        qDebug() << "Error changing frame color range";
-        return QImage();
-    }
-
-    return QImage(m_buffer, frame->width, frame->height, linesize, QImage::Format_RGB32).copy();
 }
 
 void decoder::seek(double posMs)
@@ -199,6 +170,9 @@ void decoder::seekTo(double posMs)
         qDebug() << "seekTo: Not a video";
         return;
     }
+
+    // clear queue
+    m_frameQueue.clear();
 
     // Correct stream
     AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
@@ -262,16 +236,20 @@ int64_t decoder::getFramePosMs(const AVFrame *frame) const
     return av_rescale_q(pts, stream->time_base, AVRational{1, 1000});
 }
 
+AVFramePtr decoder::cloneToSharedPtr(AVFrame *frame)
+{
+    AVFrame *dstFrame = av_frame_clone(frame);
+
+    return AVFramePtr(dstFrame, [](AVFrame *frame) {  av_frame_free(&frame);  });
+}
+
+bool decoder::getNextFrame(videoFrame &vFrame)
+{
+    return m_frameQueue.pop(vFrame);
+}
+
 decoder::~decoder()
 {
-    if (m_buffer) {
-        av_free(m_buffer);
-        m_buffer = nullptr;
-    }
-    if (m_swsCtx) {
-        sws_freeContext(m_swsCtx);
-        m_swsCtx = nullptr;
-    }
     if (m_formatContext) {
         avformat_close_input(&m_formatContext);
         avformat_free_context(m_formatContext);

@@ -6,7 +6,9 @@
 #include <QVideoFrameFormat>
 #include <QVideoFrame>
 #include <QMetaObject>
+#include <QTimer>
 
+#include "videoWidget.h"
 #include "MediaPlayer.h"
 #include "decoder.h"
 
@@ -14,12 +16,24 @@ MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
 {
     m_audioOutput = new QAudioOutput(this);
-    m_videoWidget = new QVideoWidget();
+    // m_videoWidget = new QVideoWidget();
 
-    m_videoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_videoWidget->setMinimumSize(400, 300);
-    m_sink = m_videoWidget->videoSink();
+    // m_videoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    // m_videoWidget->setMinimumSize(400, 300);
+    // m_sink = m_videoWidget->videoSink();
     
+    m_videoWidget = new videoWidget();
+    
+}
+
+void MediaPlayer::processNextFrame()
+{
+    videoFrame vFrame;
+
+    if (m_decoder->getNextFrame(vFrame)) {
+        
+        m_videoWidget->setFrame(vFrame.frame);
+    }
 }
 
 bool MediaPlayer::initDecoder()
@@ -37,8 +51,13 @@ bool MediaPlayer::initDecoder()
     connect(m_decoder, &decoder::frameDecoded, this, &MediaPlayer::sentToSink);
     connect(m_decoder, &decoder::durationChanged, this, &MediaPlayer::durationChanged);
     connect(m_decoder, &decoder::positionChanged, this, &MediaPlayer::positionChanged);
-    
+
     connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
+
+    m_renderTimer = new QTimer(this);
+    connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
+    
+    m_renderTimer->start(16);
 
     return true;
 }
@@ -71,22 +90,6 @@ void MediaPlayer::onPositionChanged(qint64 pos)
 void MediaPlayer::pause() 
 {  
 
-}
-
-void MediaPlayer::sentToSink(const QImage &image)
-{
-    QVideoFrame frame(image);
-
-    if (!m_sink) {
-        qDebug() << "Sink isnt valid";
-        return;
-    }
-    if (!frame.isValid()) {
-        qDebug() << "Frame isnt valid";
-        return;   
-    } 
-
-    m_sink->setVideoFrame(frame);
 }
 
 

@@ -1,13 +1,13 @@
 #ifndef MEDIAPLAYER_H
 #define MEDIAPLAYER_H
 
-#include <QVideoWidget>
 #include <QAudioOutput>
 #include <QImage>
-#include <QVideoSink>
 #include <QThread>
+#include <QTimer>
 
 #include "decoder.h"
+#include "videoWidget.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -25,10 +25,9 @@ signals:
 public:
     explicit MediaPlayer(QObject *parent = nullptr);
     
-    QVideoWidget *getVideoWidget() {  return m_videoWidget;  };
+    videoWidget *getVideoWidget() {  return m_videoWidget;  };
     void setVolume(float value) {  m_audioOutput->setVolume(value);  };
 
-    
     void loadVideo(const QString &path);
     
     void pause();
@@ -38,20 +37,22 @@ public:
     ~MediaPlayer() override;
 
 public slots:
-    void sentToSink(const QImage &frame);
     void onPositionChanged(qint64 pos);
 
 private slots:
 
 
 private:
+    void processNextFrame();
     bool initDecoder();
+
     decoder *m_decoder = nullptr;
     QThread m_decoderThread;
 
-    QVideoWidget *m_videoWidget = nullptr;
+    videoWidget *m_videoWidget  = nullptr;
+    QTimer *m_renderTimer = nullptr;
+
     QAudioOutput *m_audioOutput = nullptr;
-    QVideoSink   *m_sink = nullptr;
 };
 
 #endif // MEDIAPLAYER_H
