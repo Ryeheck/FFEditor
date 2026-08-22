@@ -20,21 +20,32 @@ MediaPlayer::MediaPlayer(QObject *parent)
     m_videoWidget->setMinimumSize(400, 300);
     m_sink = m_videoWidget->videoSink();
     
+}
+
+bool MediaPlayer::initDecoder()
+{
     m_decoder = new decoder();
     m_decoder->moveToThread(&m_decoderThread);
-
-    connect(m_decoder, &decoder::frameDecoded, this, &MediaPlayer::sentToSink);
+    if(!m_decoder) {
+        qDebug() << "Could't init decoder: " << m_decoder;
+        return false;
+    }
 
     connect(m_decoder, &decoder::finished, &m_decoderThread, &QThread::quit);
     connect(m_decoder, &decoder::finished, m_decoder, &QObject::deleteLater);
-    connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
+    
+    connect(m_decoder, &decoder::frameDecoded, this, &MediaPlayer::sentToSink);
     connect(m_decoder, &decoder::durationChanged, this, &MediaPlayer::durationChanged);
     connect(m_decoder, &decoder::positionChanged, this, &MediaPlayer::positionChanged);
+    
+    connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
+
+    return true;
 }
 
 void MediaPlayer::loadVideo(const QString &path) 
 {  
-    if (!m_decoderThread.isRunning()) {
+    if (!m_decoderThread.isRunning() && initDecoder()) {
         if (m_decoder->loadSource(path))
             m_decoderThread.start();
     }

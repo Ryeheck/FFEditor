@@ -35,7 +35,7 @@ private:
     int64_t getFramePosMs(const AVFrame *frame) const;
     void seekTo(double posMs);
     QImage renderFrame(AVFrame *frame);
-    
+
     AVCodecContext *m_codecContext   = nullptr;
     AVFormatContext *m_formatContext = nullptr;
     SwsContext *m_swsCtx             = nullptr;
@@ -49,7 +49,6 @@ private:
 
     int m_videoStreamIndex = -1;
     int m_bufferLinesize   = 0;
-    
 };
 
 #endif // DECODER_H

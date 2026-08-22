@@ -45,6 +45,7 @@ private slots:
 
 
 private:
+    bool initDecoder();
     decoder *m_decoder = nullptr;
     QThread m_decoderThread;
 

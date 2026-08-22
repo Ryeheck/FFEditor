@@ -16,7 +16,7 @@ extern "C" {
 
 decoder::decoder(QObject *parent) : QObject(parent)
 {
-
+    
 }
 
 bool decoder::loadSource(const QString &filename)
@@ -104,7 +104,6 @@ void decoder::processVideo()
 
     while (m_running.load()) 
     {
-
         if (m_seekReq.exchange(false)) {
             seekTo(m_seekTargetMs.load());
             continue;
@@ -125,8 +124,8 @@ void decoder::processVideo()
         while (avcodec_receive_frame(m_codecContext, frame) == 0) // FRAME LOAD
         {  
             qint64 posMs = getFramePosMs(frame);
-            if (m_isSeeking) {
-                if (posMs < m_seekTargetMs) {
+            if (m_isSeeking.load()) {
+                if (posMs < m_seekTargetMs.load()) {
                     av_frame_unref(frame);
                     continue;
                 } else {
