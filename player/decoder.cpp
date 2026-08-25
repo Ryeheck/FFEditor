@@ -1,16 +1,16 @@
+#include "decoder.h"
+#include "frameQueue.hpp"
+
 #include <QImage>
 #include <QString>
 #include <QDebug>
 #include <QThread>
 #include <atomic>
 
-#include "decoder.h"
-#include "frameQueue.hpp"
-
 extern "C" {
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#include "libavutil/avutil.h"
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
 }
 
 decoder::decoder(QObject *parent) : QObject(parent)

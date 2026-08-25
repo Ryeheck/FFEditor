@@ -1,16 +1,15 @@
 #ifndef VIDEOWIDGET_H
 #define VIDEOWIDGET_H
 
+#include "frameQueue.hpp"
+
 #include <QWidget>
 #include <QImage>
 #include <QPainter>
 
-#include "frameQueue.hpp"
-
 extern "C" {
-#include "libswscale/swscale.h"
+#include <libswscale/swscale.h>
 }
-
 
 class videoWidget : public QWidget
 {

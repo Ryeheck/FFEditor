@@ -1,3 +1,9 @@
+#include "mainwindow.h"
+#include "MediaLoader.h"
+#include "painter/customVolume.h"
+#include "painter/customPlayhead.hpp"
+#include "player/MediaPlayer.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDropEvent>
@@ -5,12 +11,6 @@
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QToolButton>
-
-#include "mainwindow.h"
-#include "MediaLoader.h"
-#include "painter/customVolume.h"
-#include "painter/customPlayhead.hpp"
-#include "player/MediaPlayer.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -26,8 +26,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     loader = new MediaLoader(this);
     connect(loader, &MediaLoader::startPlayRequested, this, [this] (const QString &path) {
-        player->loadVideo(path);
-
+        if (!player->loadVideo(path)) {
+            qDebug() << "mainwn: Couldn't load video";
+            return;
+        }
+        player->play();
         loader->hide();
     });
     

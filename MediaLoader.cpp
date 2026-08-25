@@ -1,3 +1,5 @@
+#include "MediaLoader.h"
+
 #include <QDialog>
 #include <QFileDialog>
 #include <QStandardPaths>
@@ -6,8 +8,6 @@
 #include <QListWidget>
 #include <QTabWidget>
 #include <QWidget>
-
-#include "MediaLoader.h"
 
 MediaLoader::MediaLoader(QWidget *parent)
     : QDialog(parent)

@@ -6,10 +6,10 @@
 #include <QWaitCondition>
 #include <memory>
 #include <queue>
+#include <QDebug>
 
 extern "C" {
-#include "libavutil/frame.h"
-
+#include <libavutil/frame.h>
 }
 
 using AVFramePtr = std::shared_ptr<AVFrame>;
@@ -49,7 +49,7 @@ public:
         QMutexLocker locker(&m_mutex);
 
         if (m_queue.empty()) {
-            qDebug() << "frameQueue: queue is empty";
+            // qDebug() << "frameQueue: queue is empty";
             return false;
         }
 

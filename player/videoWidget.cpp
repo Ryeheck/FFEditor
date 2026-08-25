@@ -5,9 +5,9 @@
 #include <QWidget>
 
 extern "C" {
-#include "libswscale/swscale.h"
-#include "libavutil/imgutils.h"
-#include "libavutil/mem.h"
+#include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/mem.h>
 }
 
 videoWidget::videoWidget(QWidget *parent) : QWidget(parent)

@@ -1,16 +1,16 @@
 #ifndef DECODER_H
 #define DECODER_H
 
+#include "frameQueue.hpp"
+
 #include <QObject>
 #include <QImage>
 #include <atomic>
 
 extern "C" {
-#include "libavformat/avformat.h"
-#include "libavcodec/avcodec.h"
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
-
-#include "frameQueue.hpp"
 
 class decoder : public QObject
 {

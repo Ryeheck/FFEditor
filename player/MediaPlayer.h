@@ -1,18 +1,24 @@
 #ifndef MEDIAPLAYER_H
 #define MEDIAPLAYER_H
 
+#include "decoder.h"
+#include "videoWidget.h"
+
 #include <QAudioOutput>
 #include <QImage>
 #include <QThread>
 #include <QTimer>
 
-#include "decoder.h"
-#include "videoWidget.h"
-
 extern "C" {
-#include "libavcodec/avcodec.h"
-#include "libswscale/swscale.h"
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
 }
+
+enum class playbackState {
+    Stopped,
+    Playing,
+    Paused
+};
 
 class MediaPlayer : public QObject
 {
@@ -28,7 +34,7 @@ public:
     videoWidget *getVideoWidget() {  return m_videoWidget;  };
     void setVolume(float value) {  m_audioOutput->setVolume(value);  };
 
-    void loadVideo(const QString &path);
+    bool loadVideo(const QString &path);
     
     void pause();
     void play();
@@ -43,15 +49,15 @@ private slots:
 
 
 private:
+    void cleanupDecoder();
     void processNextFrame();
-    bool initDecoder();
 
     decoder *m_decoder = nullptr;
     QThread m_decoderThread;
 
     videoWidget *m_videoWidget  = nullptr;
     QTimer *m_renderTimer = nullptr;
-
+    playbackState m_state = playbackState::Stopped;
     QAudioOutput *m_audioOutput = nullptr;
 };
 
