@@ -1,4 +1,3 @@
-#include "videoWidget.h"
 #include "MediaPlayer.h"
 #include "decoder.h"
 
@@ -13,8 +12,6 @@ MediaPlayer::MediaPlayer(QObject *parent)
 {
     m_audioOutput = new QAudioOutput(this); 
     
-    m_videoWidget = new videoWidget();
-    
     m_renderTimer = new QTimer(this);
     connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
 }
@@ -25,7 +22,7 @@ void MediaPlayer::processNextFrame()
 
     if (m_decoder->getNextFrame(vFrame)) {
         
-        m_videoWidget->setFrame(vFrame.frame);
+        emit frameChanged(vFrame.frame);
 
         positionChanged(vFrame.posMs);
     }
@@ -59,7 +56,7 @@ bool MediaPlayer::loadVideo(const QString &path)
     m_decoder->moveToThread(&m_decoderThread);
     
     connect(&m_decoderThread, &QThread::started, this,  [this] () {
-        // Realise FPS on video, coming soon...
+        // Release FPS on video, coming soon...
         m_renderTimer->start(16);
         
     });
@@ -100,12 +97,14 @@ void MediaPlayer::pause()
     if (m_state == playbackState::Paused) return;
     m_state = playbackState::Paused;
 
-    m_decoderThread.wait(10000);
+    if (m_decoderThread.isRunning())
+        m_decoderThread.wait();
 }
 
 
 MediaPlayer::~MediaPlayer()
 {
+    cleanupDecoder();
 
     qDebug() << "MediaPlayer: ok";
 }

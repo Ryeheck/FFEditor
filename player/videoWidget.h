@@ -19,6 +19,7 @@ public:
     explicit videoWidget(QWidget *parent = nullptr);
     ~videoWidget() override;
 
+public slots:
     void setFrame(const AVFramePtr &vFrame);
 
 protected:

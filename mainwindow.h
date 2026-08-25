@@ -5,6 +5,7 @@
 #include "painter/customVolume.h"
 #include "painter/customPlayhead.hpp"
 #include "player/MediaPlayer.h"
+#include "player/videoWidget.h"
 
 #include <QMainWindow>
 #include <QVBoxLayout>
@@ -23,6 +24,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     
 private:
+    videoWidget *videoWd;
     QWidget *centralWidget;
     MediaPlayer *player;
     MediaLoader *loader;

@@ -3,6 +3,7 @@
 #include "painter/customVolume.h"
 #include "painter/customPlayhead.hpp"
 #include "player/MediaPlayer.h"
+#include "player/videoWidget.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -19,10 +20,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     setCentralWidget(centralWidget);
 
     player = new MediaPlayer(this);
-    //player->getVideoWidget()->installEventFilter(this);
-    //player->getVideoWidget()->setAcceptDrops(true);
-
-    MainLayout->addWidget(player->getVideoWidget());
+    
+    videoWd = new videoWidget(this);
+    connect(player, &MediaPlayer::frameChanged, videoWd, &videoWidget::setFrame);
+    MainLayout->addWidget(videoWd);
 
     loader = new MediaLoader(this);
     connect(loader, &MediaLoader::startPlayRequested, this, [this] (const QString &path) {
@@ -85,7 +86,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    if(obj == player->getVideoWidget()) {
+    if(obj == videoWd) {
         // If drag file
         if(event->type() == QEvent::DragEnter) { 
             qDebug() << "DragEnterEvent";
