@@ -1,7 +1,7 @@
 #ifndef DECODER_H
 #define DECODER_H
 
-#include "frameQueue.hpp"
+#include "FrameQueue.hpp"
 
 #include <QObject>
 #include <QImage>
@@ -12,7 +12,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-class decoder : public QObject
+class Decoder : public QObject
 {
     Q_OBJECT
 
@@ -22,8 +22,8 @@ signals:
     void positionChanged(qint64 posMs);
     
 public:
-    explicit decoder(QObject *parent = nullptr);
-    ~decoder() override;
+    explicit Decoder(QObject *parent = nullptr);
+    ~Decoder() override;
 
     bool getNextFrame(videoFrame &vFrame);
 
@@ -40,7 +40,7 @@ private:
     AVCodecContext *m_codecContext   = nullptr;
     AVFormatContext *m_formatContext = nullptr;
 
-    frameQueue m_frameQueue;
+    FrameQueue m_frameQueue;
 
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_seekReq{false};

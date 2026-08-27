@@ -1,5 +1,5 @@
-#include "decoder.h"
-#include "frameQueue.hpp"
+#include "Decoder.h"
+#include "FrameQueue.hpp"
 
 #include <QImage>
 #include <QString>
@@ -13,12 +13,12 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
-decoder::decoder(QObject *parent) : QObject(parent)
+Decoder::Decoder(QObject *parent) : QObject(parent)
 {
     
 }
 
-bool decoder::loadSource(const QString &filename)
+bool Decoder::loadSource(const QString &filename)
 {
     // Close old video file
     if (m_codecContext)  avcodec_free_context(&m_codecContext);
@@ -94,7 +94,7 @@ cleanup:
     return false;
 }
 
-void decoder::processVideo()
+void Decoder::processVideo()
 {
     m_running.store(true);
 
@@ -155,13 +155,13 @@ void decoder::processVideo()
     emit finished();
 }
 
-void decoder::seek(double posMs)
+void Decoder::seek(double posMs)
 {
     m_seekReq.store(true);
     m_seekTargetMs.store(posMs);
 }
 
-void decoder::seekTo(double posMs)
+void Decoder::seekTo(double posMs)
 {
     if (!m_formatContext || !m_codecContext || m_videoStreamIndex < 0) {
         qDebug() << "seekTo: Not a video";
@@ -209,7 +209,7 @@ void decoder::seekTo(double posMs)
 
 }
 
-int64_t decoder::getFramePosMs(const AVFrame *frame) const
+int64_t Decoder::getFramePosMs(const AVFrame *frame) const
 {
     if (!frame || !m_formatContext || !m_codecContext) {
         qDebug() << "getFramePosMs: not a frame";
@@ -233,19 +233,19 @@ int64_t decoder::getFramePosMs(const AVFrame *frame) const
     return av_rescale_q(pts, stream->time_base, AVRational{1, 1000});
 }
 
-AVFramePtr decoder::cloneToSharedPtr(AVFrame *frame)
+AVFramePtr Decoder::cloneToSharedPtr(AVFrame *frame)
 {
     AVFrame *dstFrame = av_frame_clone(frame);
 
     return AVFramePtr(dstFrame, [](AVFrame *frame) {  av_frame_free(&frame);  });
 }
 
-bool decoder::getNextFrame(videoFrame &vFrame)
+bool Decoder::getNextFrame(videoFrame &vFrame)
 {
     return m_frameQueue.pop(vFrame);
 }
 
-decoder::~decoder()
+Decoder::~Decoder()
 {
     if (m_formatContext) {
         avformat_close_input(&m_formatContext);

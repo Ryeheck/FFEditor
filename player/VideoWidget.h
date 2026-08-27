@@ -1,7 +1,7 @@
 #ifndef VIDEOWIDGET_H
 #define VIDEOWIDGET_H
 
-#include "frameQueue.hpp"
+#include "FrameQueue.hpp"
 
 #include <QWidget>
 #include <QImage>
@@ -11,13 +11,13 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-class videoWidget : public QWidget
+class VideoWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit videoWidget(QWidget *parent = nullptr);
-    ~videoWidget() override;
+    explicit VideoWidget(QWidget *parent = nullptr);
+    ~VideoWidget() override;
 
 public slots:
     void setFrame(const AVFramePtr &vFrame);

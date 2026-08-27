@@ -1,8 +1,8 @@
 #ifndef MEDIAPLAYER_H
 #define MEDIAPLAYER_H
 
-#include "decoder.h"
-#include "frameQueue.hpp"
+#include "Decoder.h"
+#include "FrameQueue.hpp"
 
 #include <QAudioOutput>
 #include <QImage>
@@ -50,7 +50,7 @@ private:
     void cleanupDecoder();
     void processNextFrame();
 
-    decoder *m_decoder = nullptr;
+    Decoder *m_decoder = nullptr;
     QThread m_decoderThread;
 
     QTimer *m_renderTimer = nullptr;

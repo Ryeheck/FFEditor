@@ -1,4 +1,4 @@
-#include "customVolume.h"
+#include "CustomVolume.h"
 
 #include <QWidget>
 #include <QPainter>

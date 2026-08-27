@@ -19,10 +19,10 @@ struct videoFrame {
     qint64 posMs;
 };
 
-class frameQueue
+class FrameQueue
 {
 public:
-    explicit frameQueue(size_t maxSize = 15) : m_maxSize(maxSize), m_abort(false) {}
+    explicit FrameQueue(size_t maxSize = 15) : m_maxSize(maxSize), m_abort(false) {}
 
     bool push(const videoFrame &vFrame)
     {
@@ -34,7 +34,7 @@ public:
             m_condNotFull.wait(&m_mutex);
         }
         if (m_abort) {
-            qDebug() << "frameQueue: abort";
+            qDebug() << "FrameQueue: abort";
             return false;
         }
 
@@ -49,7 +49,7 @@ public:
         QMutexLocker locker(&m_mutex);
 
         if (m_queue.empty()) {
-            // qDebug() << "frameQueue: queue is empty";
+            // qDebug() << "FrameQueue: queue is empty";
             return false;
         }
 

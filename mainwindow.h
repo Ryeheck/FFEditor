@@ -2,10 +2,10 @@
 #define MAINWINDOW_H
 
 #include "MediaLoader.h"
-#include "painter/customVolume.h"
-#include "painter/customPlayhead.hpp"
+#include "painter/CustomVolume.h"
+#include "painter/CustomPlayhead.hpp"
 #include "player/MediaPlayer.h"
-#include "player/videoWidget.h"
+#include "player/VideoWidget.h"
 
 #include <QMainWindow>
 #include <QVBoxLayout>
@@ -24,7 +24,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     
 private:
-    videoWidget *videoWd;
+    VideoWidget *videoWidget;
     QWidget *centralWidget;
     MediaPlayer *player;
     MediaLoader *loader;

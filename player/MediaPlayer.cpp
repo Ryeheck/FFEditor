@@ -1,5 +1,5 @@
 #include "MediaPlayer.h"
-#include "decoder.h"
+#include "Decoder.h"
 
 #include <QAudioOutput>
 #include <QDebug>
@@ -44,8 +44,8 @@ bool MediaPlayer::loadVideo(const QString &path)
 {  
     cleanupDecoder();
 
-    auto newDecoder = std::make_unique<decoder>();
-    connect(newDecoder.get(), &decoder::durationChanged, this, &MediaPlayer::durationChanged);
+    auto newDecoder = std::make_unique<Decoder>();
+    connect(newDecoder.get(), &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
 
     if (!newDecoder->loadSource(path)) {
         qDebug() << "Couldn't open video file: " << path;
@@ -61,9 +61,9 @@ bool MediaPlayer::loadVideo(const QString &path)
         
     });
     
-    connect(m_decoder, &decoder::finished, &m_decoderThread, &QThread::quit);
-    connect(m_decoder, &decoder::finished, m_decoder, &QObject::deleteLater);
-    connect(&m_decoderThread, &QThread::started, m_decoder, &decoder::processVideo);
+    connect(m_decoder, &Decoder::finished, &m_decoderThread, &QThread::quit);
+    connect(m_decoder, &Decoder::finished, m_decoder, &QObject::deleteLater);
+    connect(&m_decoderThread, &QThread::started, m_decoder, &Decoder::processVideo);
             
     return true;
 }

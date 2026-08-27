@@ -28,19 +28,18 @@ qt_add_executable(FFEditor
     main.cpp
     mainwindow.h
     mainwindow.cpp
-    
     MediaLoader.h
     MediaLoader.cpp
-    painter/customVolume.h
-    painter/customVolume.cpp
-    painter/customPlayhead.hpp
+    painter/CustomVolume.h
+    painter/CustomVolume.cpp
+    painter/CustomPlayhead.hpp
     player/MediaPlayer.h
     player/MediaPlayer.cpp
-    player/decoder.h
-    player/decoder.cpp
-    player/frameQueue.hpp
-    player/videoWidget.h
-    player/videoWidget.cpp
+    player/Decoder.h
+    player/Decoder.cpp
+    player/FrameQueue.hpp
+    player/VideoWidget.h
+    player/VideoWidget.cpp
 )
 
 include(GNUInstallDirs)

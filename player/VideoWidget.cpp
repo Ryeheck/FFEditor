@@ -1,4 +1,4 @@
-#include "videoWidget.h"
+#include "VideoWidget.h"
 
 #include <QImage>
 #include <QPainter>
@@ -10,12 +10,12 @@ extern "C" {
 #include <libavutil/mem.h>
 }
 
-videoWidget::videoWidget(QWidget *parent) : QWidget(parent)
+VideoWidget::VideoWidget(QWidget *parent) : QWidget(parent)
 {
     setAttribute(Qt::WA_OpaquePaintEvent);
 }
 
-void videoWidget::setFrame(const AVFramePtr &vFrame)
+void VideoWidget::setFrame(const AVFramePtr &vFrame)
 {
     if (!vFrame)  return;
 
@@ -24,7 +24,7 @@ void videoWidget::setFrame(const AVFramePtr &vFrame)
     update();
 }
 
-QImage videoWidget::renderFrame(AVFrame *frame)
+QImage VideoWidget::renderFrame(AVFrame *frame)
 {
     int align = 32;
     int requestedSize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, frame->width, frame->height, align);
@@ -60,7 +60,7 @@ QImage videoWidget::renderFrame(AVFrame *frame)
     return QImage(m_buffer, frame->width, frame->height, linesize, QImage::Format_RGB32).copy();
 }
 
-void videoWidget::paintEvent(QPaintEvent *event)
+void VideoWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
 
@@ -76,7 +76,7 @@ void videoWidget::paintEvent(QPaintEvent *event)
     }
 }
 
-videoWidget::~videoWidget()
+VideoWidget::~VideoWidget()
 {
     if (m_buffer) {
         av_free(m_buffer);
