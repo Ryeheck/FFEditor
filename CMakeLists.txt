@@ -22,6 +22,16 @@ pkg_check_modules(FFMPEG REQUIRED
     libswscale
 )
 
+include(FetchContent)
+
+FetchContent_Declare(
+    miniaudio
+    GIT_REPOSITORY https://github.com/mackron/miniaudio.git
+    GIT_TAG        master
+)
+
+FetchContent_MakeAvailable(miniaudio)
+
 qt_add_executable(FFEditor
     WIN32 MACOSX_BUNDLE
     ${RESOURCES}
@@ -40,6 +50,8 @@ qt_add_executable(FFEditor
     player/FrameQueue.hpp
     player/VideoWidget.h
     player/VideoWidget.cpp
+    miniaudio_impl.cpp
+
 )
 
 include(GNUInstallDirs)
@@ -50,7 +62,30 @@ install(TARGETS FFEditor
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-target_include_directories(FFEditor PRIVATE ${FFMPEG_INCLUDE_DIRS})
+target_include_directories(FFEditor PRIVATE 
+    ${FFMPEG_INCLUDE_DIRS}
+    ${miniaudio_SOURCE_DIR}
+)
+
+if(WIN32)
+    target_link_libraries(FFEditor PRIVATE ole32 user32 winm)
+elseif(APPLE)
+    target_link_libraries(FFEditor PRIVATE
+    "-framework CoreAudio"
+    "-framework CoreFoundation"
+    "-framework AudioToolbox"
+    )
+elseif(UNIX)
+    find_package(Threads REQUIRED)
+    target_link_libraries(FFEditor PRIVATE
+        Threads::Threads
+        ${CMAKE_DL_LIBS}
+        m
+    )
+endif()
+
+target_link_directories(FFEditor PRIVATE ${FFMPEG_INCLUDE_DIRS})
+
 target_link_libraries(FFEditor
     PRIVATE
         Qt6::Core
