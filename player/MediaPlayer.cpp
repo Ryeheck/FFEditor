@@ -1,19 +1,40 @@
 #include "MediaPlayer.h"
 #include "Decoder.h"
+#include "miniaudio.h"
 
 #include <QAudioOutput>
 #include <QDebug>
 #include <QImage>
 #include <QTimer>
-#include <iostream>
 
 MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
 {
-    m_audioOutput = new QAudioOutput(this); 
-    
     m_renderTimer = new QTimer(this);
     connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
+
+    
+}
+
+bool MediaPlayer::initAudio()
+{
+    ma_device_config config = ma_device_config_init(ma_device_type_playback);
+    config.playback.format   = ma_format_f32; // Works with float32 (-1 - 1)
+    config.playback.channels = 2;             // Stereo
+    config.sampleRate        = 48000;         // Ghz
+    config.dataCallback      = audioCallback; // Function
+    config.pUserData         = this;          // Ptr on this player
+
+    if (ma_device_init(NULL, &config, &m_audioDevice) != MA_SUCCESS)
+        return false;
+    
+    m_audioInit = true;
+    return true;
+}
+
+void MediaPlayer::audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
+{
+    /* Comming soon... */
 }
 
 void MediaPlayer::processNextFrame()
@@ -40,19 +61,9 @@ void MediaPlayer::cleanupDecoder()
     m_decoder = nullptr;
 }
 
-bool MediaPlayer::loadVideo(const QString &path) 
-{  
-    cleanupDecoder();
-
-    auto newDecoder = std::make_unique<Decoder>();
-    connect(newDecoder.get(), &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
-
-    if (!newDecoder->loadSource(path)) {
-        qDebug() << "Couldn't open video file: " << path;
-        return false;
-    }
-
-    m_decoder = newDecoder.release();
+bool MediaPlayer::initDecoder()
+{
+    m_decoder = new Decoder();
     m_decoder->moveToThread(&m_decoderThread);
     
     connect(&m_decoderThread, &QThread::started, this,  [this] () {
@@ -60,11 +71,25 @@ bool MediaPlayer::loadVideo(const QString &path)
         m_renderTimer->start(16);
         
     });
-    
+    connect(m_decoder, &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
     connect(m_decoder, &Decoder::finished, &m_decoderThread, &QThread::quit);
     connect(m_decoder, &Decoder::finished, m_decoder, &QObject::deleteLater);
     connect(&m_decoderThread, &QThread::started, m_decoder, &Decoder::processVideo);
             
+    return true;
+}
+
+bool MediaPlayer::loadVideo(const QString &path) 
+{  
+    cleanupDecoder();
+    initAudio();
+    initDecoder();
+
+    if (!m_decoder->loadSource(path)) {
+        qDebug() << "Couldn't open video file: " << path;
+        return false;
+    }
+
     return true;
 }
 

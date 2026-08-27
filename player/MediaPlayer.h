@@ -12,6 +12,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include "miniaudio.h"
 }
 
 enum class playbackState {
@@ -33,7 +34,7 @@ public:
     explicit MediaPlayer(QObject *parent = nullptr);
     ~MediaPlayer() override;
 
-    void setVolume(float value) {  m_audioOutput->setVolume(value);  };
+    void setVolume(float value) {  /* m_audioOutput->setVolume(value); */ };
 
     bool loadVideo(const QString &path);
     void pause();
@@ -47,15 +48,18 @@ private slots:
 
 
 private:
+    static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
+    bool initAudio();
+    bool initDecoder();
     void cleanupDecoder();
     void processNextFrame();
-
-    Decoder *m_decoder = nullptr;
+   
     QThread m_decoderThread;
-
-    QTimer *m_renderTimer = nullptr;
-    playbackState m_state = playbackState::Stopped;
-    QAudioOutput *m_audioOutput = nullptr;
+    ma_device m_audioDevice;
+    Decoder *m_decoder      = nullptr; 
+    QTimer *m_renderTimer   = nullptr;
+    playbackState m_state   = playbackState::Stopped;
+    bool m_audioInit        = false;
 };
 
 #endif // MEDIAPLAYER_H
