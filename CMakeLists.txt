@@ -26,8 +26,8 @@ include(FetchContent)
 
 FetchContent_Declare(
     miniaudio
-    GIT_REPOSITORY https://github.com/mackron/miniaudio.git
-    GIT_TAG        master
+    GIT_REPOSITORY "https://github.com/mackron/miniaudio.git"
+    GIT_TAG        "master"
 )
 
 FetchContent_MakeAvailable(miniaudio)
@@ -35,22 +35,22 @@ FetchContent_MakeAvailable(miniaudio)
 qt_add_executable(FFEditor
     WIN32 MACOSX_BUNDLE
     ${RESOURCES}
-    main.cpp
-    mainwindow.h
-    mainwindow.cpp
-    MediaLoader.h
-    MediaLoader.cpp
-    painter/CustomVolume.h
-    painter/CustomVolume.cpp
-    painter/CustomPlayhead.hpp
-    player/MediaPlayer.h
-    player/MediaPlayer.cpp
-    player/Decoder.h
-    player/Decoder.cpp
-    player/FrameQueue.hpp
-    player/VideoWidget.h
-    player/VideoWidget.cpp
-    miniaudio_impl.cpp
+    src/main.cpp
+    src/ui/mainwindow.h
+    src/ui/mainwindow.cpp
+    src/ui/MediaLoader.h
+    src/ui/MediaLoader.cpp
+    src/painter/CustomVolume.h
+    src/painter/CustomVolume.cpp
+    src/painter/CustomPlayhead.hpp
+    src/player/MediaPlayer.h
+    src/player/MediaPlayer.cpp
+    src/player/Decoder.h
+    src/player/Decoder.cpp
+    src/player/FrameQueue.hpp
+    src/player/VideoWidget.h
+    src/player/VideoWidget.cpp
+    src/player/miniaudio_impl.cpp
 
 )
 

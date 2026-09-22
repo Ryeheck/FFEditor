@@ -1,9 +1,9 @@
 #include "mainwindow.h"
 #include "MediaLoader.h"
-#include "painter/CustomVolume.h"
-#include "painter/CustomPlayhead.hpp"
-#include "player/MediaPlayer.h"
-#include "player/VideoWidget.h"
+#include "../painter/CustomVolume.h"
+#include "../painter/CustomPlayhead.hpp"
+#include "../player/MediaPlayer.h"
+#include "../player/VideoWidget.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
