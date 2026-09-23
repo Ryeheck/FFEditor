@@ -19,7 +19,7 @@ MediaPlayer::MediaPlayer(QObject *parent)
 bool MediaPlayer::initAudio()
 {
     ma_device_config config = ma_device_config_init(ma_device_type_playback);
-    config.playback.format   = ma_format_f32; // Works with float32 (-1 - 1)
+    config.playback.format   = ma_format_f32; // Works with float32 ([-1 : 1])
     config.playback.channels = 2;             // Stereo
     config.sampleRate        = 48000;         // Ghz
     config.dataCallback      = audioCallback; // Function
