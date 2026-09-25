@@ -10,7 +10,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 
 qt_standard_project_setup()
 
-qt_add_resources(RESOURCES "resources.qrc")
+qt_add_resources(RESOURCES "assets/resources.qrc")
 
 
 find_package(PkgConfig REQUIRED)
@@ -50,7 +50,6 @@ qt_add_executable(FFEditor
     src/player/FrameQueue.hpp
     src/player/VideoWidget.h
     src/player/VideoWidget.cpp
-    src/player/miniaudio_impl.cpp
 
 )
 

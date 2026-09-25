@@ -39,6 +39,12 @@ bool Decoder::loadSource(const QString &filename)
         goto cleanup;
     }
 
+    // find stream info
+    if (avformat_find_stream_info(m_formatContext, NULL) != 0) {
+        qDebug() << "Couldn't find stream info";
+        goto cleanup;
+    }
+
     // Current streams
     m_videoStreamIndex = -1;
     m_audioStreamIndex = -1;
@@ -56,12 +62,6 @@ bool Decoder::loadSource(const QString &filename)
     // Not any streams
     if (m_videoStreamIndex == -1 || m_audioStreamIndex == -1) {
         qDebug() << "Couldn't open stream";
-        goto cleanup;
-    }
-
-    // find stream info
-    if (avformat_find_stream_info(m_formatContext, NULL) != 0) {
-        qDebug() << "Couldn't find stream info";
         goto cleanup;
     }
 

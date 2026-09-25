@@ -1,3 +1,5 @@
+#define MINIAUDIO_IMPLEMENTATION
+
 #include "MediaPlayer.h"
 #include "Decoder.h"
 #include "miniaudio.h"
