@@ -4,6 +4,7 @@
 #include "Decoder.h"
 #include "miniaudio.h"
 
+#include <qobject.h>
 #include <QAudioOutput>
 #include <QDebug>
 #include <QImage>
@@ -56,8 +57,15 @@ void MediaPlayer::cleanupDecoder()
     if (m_decoder) {
         m_decoder->stop();
         
-        if (m_decoderThread.isRunning())
+        if (m_decoderThread.isRunning()) {
             m_decoderThread.quit();
+
+            if (!m_decoderThread.wait(3000)) {
+                qWarning() << "cleanup: Thread failed to stop gracefully, terminating...";
+                m_decoderThread.terminate();
+                m_decoderThread.wait();
+            }
+        }
 
         m_decoder->deleteLater();
         m_decoder = nullptr;
@@ -83,7 +91,7 @@ bool MediaPlayer::initDecoder()
     connect(m_decoder, &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
     connect(m_decoder, &Decoder::finished, this, &MediaPlayer::cleanupDecoder);
     connect(&m_decoderThread, &QThread::started, m_decoder, &Decoder::processVideo);
-            
+    
     return true;
 }
 
@@ -98,7 +106,7 @@ bool MediaPlayer::loadVideo(const QString &path)
         return false;
     }
 
-    initAudio();
+    // initAudio();
     return true;
 }
 
@@ -140,6 +148,9 @@ void MediaPlayer::pause()
 MediaPlayer::~MediaPlayer()
 {
     cleanupDecoder();
+
+    if (m_renderTimer)
+        m_renderTimer->deleteLater();
 
     qDebug() << "MediaPlayer: ok";
 }

@@ -30,15 +30,16 @@ public:
 
 public slots:
     void processVideo();
-    bool loadSource(const QString &filename);
-    void seek(double posMs);
     void stop();
+    void clear();
+    bool loadSource(const QString &filename);
+    void seek(double posMs); 
 
 private:
     void demuxLoop();
+    void seekTo(double posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame) const;
-    void seekTo(double posMs);
 
     AVCodecContext *m_codecContextAudio = nullptr;
     AVCodecContext *m_codecContextVideo = nullptr;

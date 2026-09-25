@@ -25,16 +25,7 @@ Decoder::Decoder(QObject *parent) : QObject(parent),
 bool Decoder::loadSource(const QString &filename)
 {
     // Close old video file
-    m_running.store(false);
-    stop();
-    m_pktAQueue.clear();
-    m_pktVQueue.clear();
-    m_frameAQueue.clear();
-    m_frameVQueue.clear();
-
-    if (m_codecContextVideo)  avcodec_free_context(&m_codecContextVideo);
-    if (m_codecContextAudio)  avcodec_free_context(&m_codecContextAudio);
-    if (m_formatContext)      avformat_close_input(&m_formatContext);
+    clear();
     
     // Initialization codecs
     AVCodecParameters *codecParams = nullptr;
@@ -158,7 +149,7 @@ void Decoder::processVideo()
             continue;
         }
                 
-        while (avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
+        while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
         {  
             qint64 posMs = getFramePosMs(frame);
             if (m_isSeeking.load()) {
@@ -189,7 +180,7 @@ void Decoder::processVideo()
     av_frame_free(&frame);
     av_packet_free(&packet);
     
-    stop();
+    clear();
 
     emit finished();
 }
@@ -207,6 +198,22 @@ void Decoder::stop()
     m_pktVQueue.abort();
     m_frameAQueue.abort();
     m_frameVQueue.abort();
+}
+
+void Decoder::clear()
+{
+    stop();
+    m_pktAQueue.clear();
+    m_pktVQueue.clear();
+    m_frameAQueue.clear();
+    m_frameVQueue.clear();
+
+    m_seekReq.store(false);
+    m_seekTargetMs.store(0);
+
+    if (m_codecContextVideo)  avcodec_free_context(&m_codecContextVideo);
+    if (m_codecContextAudio)  avcodec_free_context(&m_codecContextAudio);
+    if (m_formatContext)      avformat_close_input(&m_formatContext);
 }
 
 void Decoder::seek(double posMs)
@@ -303,22 +310,7 @@ bool Decoder::getNextFrame(videoFrame &vFrame)
 
 Decoder::~Decoder()
 {
-    stop();
-
-    if (m_formatContext) {
-        avformat_close_input(&m_formatContext);
-        avformat_free_context(m_formatContext);
-        m_formatContext = nullptr;
-    }
-    if (m_codecContextVideo) {
-        avcodec_free_context(&m_codecContextVideo);
-        m_codecContextVideo = nullptr;
-    }
-    if (m_codecContextAudio) {
-        avcodec_free_context(&m_codecContextAudio);
-        m_codecContextAudio = nullptr;
-    }
+    clear();
     
-
     qDebug() << "Decoder: ok";
 }
