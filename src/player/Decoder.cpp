@@ -25,6 +25,13 @@ Decoder::Decoder(QObject *parent) : QObject(parent),
 bool Decoder::loadSource(const QString &filename)
 {
     // Close old video file
+    m_running.store(false);
+    stop();
+    m_pktAQueue.clear();
+    m_pktVQueue.clear();
+    m_frameAQueue.clear();
+    m_frameVQueue.clear();
+
     if (m_codecContextVideo)  avcodec_free_context(&m_codecContextVideo);
     if (m_codecContextAudio)  avcodec_free_context(&m_codecContextAudio);
     if (m_formatContext)      avformat_close_input(&m_formatContext);
@@ -181,9 +188,25 @@ void Decoder::processVideo()
     // Free and abort queue
     av_frame_free(&frame);
     av_packet_free(&packet);
-    m_frameVQueue.abort();
+    
+    stop();
 
     emit finished();
+}
+
+void Decoder::demuxLoop()
+{
+    /* comming soon */
+}
+
+void Decoder::stop()
+{
+    m_running.store(false);
+
+    m_pktAQueue.abort();
+    m_pktVQueue.abort();
+    m_frameAQueue.abort();
+    m_frameVQueue.abort();
 }
 
 void Decoder::seek(double posMs)
@@ -280,6 +303,8 @@ bool Decoder::getNextFrame(videoFrame &vFrame)
 
 Decoder::~Decoder()
 {
+    stop();
+
     if (m_formatContext) {
         avformat_close_input(&m_formatContext);
         avformat_free_context(m_formatContext);
@@ -293,6 +318,7 @@ Decoder::~Decoder()
         avcodec_free_context(&m_codecContextAudio);
         m_codecContextAudio = nullptr;
     }
+    
 
     qDebug() << "Decoder: ok";
 }

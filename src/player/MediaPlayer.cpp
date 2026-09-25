@@ -53,14 +53,19 @@ void MediaPlayer::processNextFrame()
 
 void MediaPlayer::cleanupDecoder()
 {
-    if (m_decoderThread.isRunning()) {
-        m_decoderThread.quit();
-        m_decoderThread.deleteLater();
-    }
+    if (m_decoder) {
+        m_decoder->stop();
+        
+        if (m_decoderThread.isRunning())
+            m_decoderThread.quit();
 
-    m_renderTimer->stop();
-
-    m_decoder = nullptr;
+        m_decoder->deleteLater();
+        m_decoder = nullptr;
+    }     
+    if (m_renderTimer)  
+        m_renderTimer->stop();
+    
+    m_state = playbackState::Stopped;
 }
 
 bool MediaPlayer::initDecoder()
@@ -68,14 +73,15 @@ bool MediaPlayer::initDecoder()
     m_decoder = new Decoder();
     m_decoder->moveToThread(&m_decoderThread);
     
+    m_decoderThread.disconnect();
+
     connect(&m_decoderThread, &QThread::started, this,  [this] () {
         // Release FPS on video, coming soon...
         m_renderTimer->start(16);
         
     });
     connect(m_decoder, &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
-    connect(m_decoder, &Decoder::finished, &m_decoderThread, &QThread::quit);
-    connect(m_decoder, &Decoder::finished, m_decoder, &QObject::deleteLater);
+    connect(m_decoder, &Decoder::finished, this, &MediaPlayer::cleanupDecoder);
     connect(&m_decoderThread, &QThread::started, m_decoder, &Decoder::processVideo);
             
     return true;
@@ -84,14 +90,15 @@ bool MediaPlayer::initDecoder()
 bool MediaPlayer::loadVideo(const QString &path) 
 {  
     cleanupDecoder();
-    initAudio();
     initDecoder();
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Couldn't open video file: " << path;
+        cleanupDecoder();
         return false;
     }
 
+    initAudio();
     return true;
 }
 
@@ -116,7 +123,8 @@ void MediaPlayer::stop()
 
 void MediaPlayer::onPositionChanged(qint64 pos)
 {
-    m_decoder->seek(pos);
+    if (m_decoder)
+        m_decoder->seek(pos);
 }
 
 void MediaPlayer::pause() 
