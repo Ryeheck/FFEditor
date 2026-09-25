@@ -37,8 +37,9 @@ private:
     int64_t getFramePosMs(const AVFrame *frame) const;
     void seekTo(double posMs);
 
-    AVCodecContext *m_codecContext   = nullptr;
-    AVFormatContext *m_formatContext = nullptr;
+    AVCodecContext *m_codecContextAudio = nullptr;
+    AVCodecContext *m_codecContextVideo = nullptr;
+    AVFormatContext *m_formatContext    = nullptr;
 
     FrameQueue m_frameQueue;
 
@@ -48,6 +49,7 @@ private:
     std::atomic<bool> m_isSeeking{false};
 
     int m_videoStreamIndex = -1;
+    int m_audioStreamIndex = -1;
 };
 
 #endif // DECODER_H

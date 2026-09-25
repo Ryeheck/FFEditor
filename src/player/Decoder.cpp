@@ -21,8 +21,9 @@ Decoder::Decoder(QObject *parent) : QObject(parent)
 bool Decoder::loadSource(const QString &filename)
 {
     // Close old video file
-    if (m_codecContext)  avcodec_free_context(&m_codecContext);
-    if (m_formatContext) avformat_close_input(&m_formatContext);
+    if (m_codecContextVideo)  avcodec_free_context(&m_codecContextVideo);
+    if (m_codecContextAudio)  avcodec_free_context(&m_codecContextAudio);
+    if (m_formatContext)      avformat_close_input(&m_formatContext);
     
     // Initialization codecs
     AVCodecParameters *codecParams = nullptr;
@@ -34,18 +35,22 @@ bool Decoder::loadSource(const QString &filename)
         goto cleanup;
     }
 
-    // Current video stream
+    // Current streams
     m_videoStreamIndex = -1;
+    m_audioStreamIndex = -1;
     for (int i = 0; i < m_formatContext->nb_streams; ++i)
     {
-        if(m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+        if(m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) 
             m_videoStreamIndex = i;
+        if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) 
+            m_audioStreamIndex = i;
+            
+        if (m_videoStreamIndex != -1 && m_audioStreamIndex != -1)
             break;
-        }
     }
-
-    // Not video stream
-    if (m_videoStreamIndex == -1) {
+    
+    // Not any streams
+    if (m_videoStreamIndex == -1 || m_audioStreamIndex == -1) {
         qDebug() << "Couldn't open stream";
         goto cleanup;
     }
@@ -67,16 +72,36 @@ bool Decoder::loadSource(const QString &filename)
     codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
     codec = avcodec_find_decoder(codecParams->codec_id);
 
-    m_codecContext = avcodec_alloc_context3(codec);
-    if (!m_codecContext) {
+    // Video codec
+    m_codecContextVideo = avcodec_alloc_context3(codec);
+    if (!m_codecContextVideo) {
         qDebug() << "Couldn't allocate codec context";
         goto cleanup;
     }
-    if (avcodec_parameters_to_context(m_codecContext, codecParams) != 0) {
+    if (avcodec_parameters_to_context(m_codecContextVideo, codecParams) != 0) {
         qDebug() << "Couldn't copy codec params to codec context";
         goto cleanup;
     }
-    if (avcodec_open2(m_codecContext, codec, NULL) != 0) {
+    if (avcodec_open2(m_codecContextVideo, codec, NULL) != 0) {
+        qDebug() << "Couldn't open codec";
+        goto cleanup;
+    }
+
+    // Open codecs
+    codecParams = m_formatContext->streams[m_audioStreamIndex]->codecpar;
+    codec = avcodec_find_decoder(codecParams->codec_id);
+
+    // Audio codec
+    m_codecContextAudio = avcodec_alloc_context3(codec);
+    if (!m_codecContextAudio) {
+        qDebug() << "Couldn't allocate codec context";
+        goto cleanup;
+    }
+    if (avcodec_parameters_to_context(m_codecContextAudio, codecParams) != 0) {
+        qDebug() << "Couldn't copy codec params to codec context";
+        goto cleanup;
+    }
+    if (avcodec_open2(m_codecContextAudio, codec, NULL) != 0) {
         qDebug() << "Couldn't open codec";
         goto cleanup;
     }
@@ -84,8 +109,10 @@ bool Decoder::loadSource(const QString &filename)
     return true;
 
 cleanup:
-    if (m_codecContext)  
-        avcodec_free_context(&m_codecContext);
+    if (m_codecContextVideo)  
+        avcodec_free_context(&m_codecContextVideo);
+    if (m_codecContextAudio)
+        avcodec_free_context(&m_codecContextAudio);
 
     if (m_formatContext) {
         avformat_close_input(&m_formatContext);
@@ -115,12 +142,12 @@ void Decoder::processVideo()
             av_packet_unref(packet);
             continue;
         }
-        if (avcodec_send_packet(m_codecContext, packet) != 0) {
+        if (avcodec_send_packet(m_codecContextVideo, packet) != 0) {
             av_packet_unref(packet);
             continue;
         }
                 
-        while (avcodec_receive_frame(m_codecContext, frame) == 0) // FRAME LOAD
+        while (avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
         {  
             qint64 posMs = getFramePosMs(frame);
             if (m_isSeeking.load()) {
@@ -163,7 +190,9 @@ void Decoder::seek(double posMs)
 
 void Decoder::seekTo(double posMs)
 {
-    if (!m_formatContext || !m_codecContext || m_videoStreamIndex < 0) {
+    if (!m_formatContext     || 
+        !m_codecContextVideo || m_videoStreamIndex < 0 ||
+        !m_codecContextAudio || m_audioStreamIndex < 0) {
         qDebug() << "seekTo: Not a video";
         return;
     }
@@ -194,13 +223,13 @@ void Decoder::seekTo(double posMs)
 
     // Clear buffers
     AVFrame *frame = av_frame_alloc();
-    while (avcodec_receive_frame(m_codecContext, frame) == 0)
+    while (avcodec_receive_frame(m_codecContextVideo, frame) == 0)
     {
         av_frame_unref(frame);
     }
     av_frame_free(&frame); 
 
-    avcodec_flush_buffers(m_codecContext);
+    avcodec_flush_buffers(m_codecContextVideo);
 
     // if (audio)          avcodec_flush_buffers(audio);
 
@@ -211,7 +240,7 @@ void Decoder::seekTo(double posMs)
 
 int64_t Decoder::getFramePosMs(const AVFrame *frame) const
 {
-    if (!frame || !m_formatContext || !m_codecContext) {
+    if (!frame || !m_formatContext || !m_codecContextAudio) {
         qDebug() << "getFramePosMs: not a frame";
         return -1;
     }
@@ -252,9 +281,13 @@ Decoder::~Decoder()
         avformat_free_context(m_formatContext);
         m_formatContext = nullptr;
     }
-    if (m_codecContext) {
-        avcodec_free_context(&m_codecContext);
-        m_codecContext = nullptr;
+    if (m_codecContextVideo) {
+        avcodec_free_context(&m_codecContextVideo);
+        m_codecContextVideo = nullptr;
+    }
+    if (m_codecContextAudio) {
+        avcodec_free_context(&m_codecContextAudio);
+        m_codecContextAudio = nullptr;
     }
 
     qDebug() << "Decoder: ok";
