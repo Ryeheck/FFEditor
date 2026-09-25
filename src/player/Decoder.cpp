@@ -13,7 +13,11 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
-Decoder::Decoder(QObject *parent) : QObject(parent)
+Decoder::Decoder(QObject *parent) : QObject(parent),
+                                    m_pktVQueue(300),
+                                    m_pktAQueue(100),
+                                    m_frameVQueue(15),
+                                    m_frameAQueue(100)
 {
     
 }
@@ -163,7 +167,7 @@ void Decoder::processVideo()
             vFrame.frame = cloneToSharedPtr(frame);
 
             // Push frame to queue
-            if (!m_frameQueue.push(vFrame)) {
+            if (!m_frameVQueue.push(vFrame)) {
                 // If queue is full
                 av_frame_unref(frame);
                 break;
@@ -177,7 +181,7 @@ void Decoder::processVideo()
     // Free and abort queue
     av_frame_free(&frame);
     av_packet_free(&packet);
-    m_frameQueue.abort();
+    m_frameVQueue.abort();
 
     emit finished();
 }
@@ -198,7 +202,7 @@ void Decoder::seekTo(double posMs)
     }
 
     // clear queue
-    m_frameQueue.clear();
+    m_frameVQueue.clear();
 
     // Correct stream
     AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
@@ -271,7 +275,7 @@ AVFramePtr Decoder::cloneToSharedPtr(AVFrame *frame)
 
 bool Decoder::getNextFrame(videoFrame &vFrame)
 {
-    return m_frameQueue.pop(vFrame);
+    return m_frameVQueue.pop(vFrame);
 }
 
 Decoder::~Decoder()

@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QImage>
 #include <atomic>
+#include <libavcodec/packet.h>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -41,7 +42,11 @@ private:
     AVCodecContext *m_codecContextVideo = nullptr;
     AVFormatContext *m_formatContext    = nullptr;
 
-    FrameQueue m_frameQueue;
+    FrameQueue<AVPacket *> m_pktVQueue;
+    FrameQueue<AVPacket *> m_pktAQueue;
+    
+    FrameQueue<videoFrame> m_frameVQueue;
+    FrameQueue<videoFrame> m_frameAQueue;
 
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_seekReq{false};
