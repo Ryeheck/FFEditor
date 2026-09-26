@@ -63,6 +63,12 @@ public:
         return true;
     }
 
+    bool isFull()
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_queue.size() >= m_maxSize;
+    }
+
     void clear()
     {
         QMutexLocker locker(&m_mutex);
