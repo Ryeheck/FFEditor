@@ -45,7 +45,8 @@ void MediaPlayer::processNextFrame()
     videoFrame vFrame;
 
     if (m_decoder->getNextFrame(vFrame)) {
-        
+        if (!vFrame.frame)  return;
+
         emit frameChanged(vFrame.frame);
 
         positionChanged(vFrame.posMs);
@@ -56,16 +57,10 @@ void MediaPlayer::cleanupDecoder()
 {
     if (m_decoder) {
         m_decoder->stop();
-        
-        if (m_decoderThread.isRunning()) {
-            m_decoderThread.quit();
 
-            if (!m_decoderThread.wait(3000)) {
-                qWarning() << "cleanup: Thread failed to stop gracefully, terminating...";
-                m_decoderThread.terminate();
-                m_decoderThread.wait();
-            }
-        }
+        if (m_demuxThread.joinable())       m_demuxThread.join();
+        if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+        // if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
 
         m_decoder->deleteLater();
         m_decoder = nullptr;
@@ -79,19 +74,10 @@ void MediaPlayer::cleanupDecoder()
 bool MediaPlayer::initDecoder()
 {
     m_decoder = new Decoder();
-    m_decoder->moveToThread(&m_decoderThread);
     
-    m_decoderThread.disconnect();
-
-    connect(&m_decoderThread, &QThread::started, this,  [this] () {
-        // Release FPS on video, coming soon...
-        m_renderTimer->start(16);
-        
-    });
     connect(m_decoder, &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
     connect(m_decoder, &Decoder::finished, this, &MediaPlayer::cleanupDecoder);
-    connect(&m_decoderThread, &QThread::started, m_decoder, &Decoder::processVideo);
-    
+
     return true;
 }
 
@@ -105,6 +91,10 @@ bool MediaPlayer::loadVideo(const QString &path)
         cleanupDecoder();
         return false;
     }
+    
+    m_demuxThread       = std::thread(&Decoder::demuxLoop, m_decoder);
+    m_videoDecodeThread = std::thread(&Decoder::decodeVideoLoop, m_decoder);
+    // m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);
 
     // initAudio();
     return true;
@@ -115,9 +105,7 @@ void MediaPlayer::play()
     if (m_state == playbackState::Playing) return;
     m_state = playbackState::Playing;
 
-    if (!m_decoderThread.isRunning()) {
-        m_decoderThread.start();
-    }
+    m_renderTimer->start(16);
         
 }
 
@@ -125,6 +113,9 @@ void MediaPlayer::stop()
 {
     if (m_state == playbackState::Stopped) return;
     m_state = playbackState::Stopped;
+
+    if (m_renderTimer)  
+        m_renderTimer->stop();
 
     cleanupDecoder();
 }
@@ -140,8 +131,6 @@ void MediaPlayer::pause()
     if (m_state == playbackState::Paused) return;
     m_state = playbackState::Paused;
 
-    if (m_decoderThread.isRunning())
-        m_decoderThread.wait();
 }
 
 

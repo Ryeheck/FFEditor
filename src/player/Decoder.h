@@ -34,9 +34,11 @@ public slots:
     void clear();
     bool loadSource(const QString &filename);
     void seek(double posMs); 
-
-private:
+    void decodeVideoLoop();
     void demuxLoop();
+    
+private:
+    
     void seekTo(double posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame) const;

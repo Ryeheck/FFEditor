@@ -1,13 +1,9 @@
 #include "Decoder.h"
 #include "FrameQueue.hpp"
 
-#include <QImage>
 #include <QString>
 #include <QDebug>
-#include <QThread>
 #include <atomic>
-#include <chrono>
-#include <thread>
 
 extern "C" {
 #include <libavcodec/packet.h>
@@ -191,12 +187,10 @@ void Decoder::processVideo()
 
 void Decoder::demuxLoop()
 {
+    m_running.store(true);
+
     while (m_running.load())
     {
-        if (m_pktAQueue.isFull() || m_pktVQueue.isFull()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            continue;
-        }
 
         AVPacket *packet = av_packet_alloc();
 
@@ -213,13 +207,102 @@ void Decoder::demuxLoop()
         }
 
         if (packet->stream_index == m_videoStreamIndex) {         // Video packet
-            m_pktVQueue.push(packet); 
-        } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
-            m_pktAQueue.push(packet);
+            if (!m_pktVQueue.push(packet)) {
+                av_packet_free(&packet);
+                break;
+            }
+
+        /* } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
+            if (!m_pktAQueue.push(packet)) {
+                av_packet_free(&packet);
+                break;
+            }
+            */
         } else {                                                  // Another
             av_packet_free(&packet);
         }
     }
+}
+
+void Decoder::decodeVideoLoop()
+{
+    m_running.store(true);
+    
+    AVFrame *frame = av_frame_alloc();
+
+    while (m_running.load()) 
+    {
+        AVPacket *packet = nullptr;
+        if (!m_pktVQueue.pop(packet)) 
+            break;
+
+        // if (m_isSeeking.load()) {}
+
+        // End file
+        if (packet == nullptr) {
+            avcodec_send_packet(m_codecContextVideo, packet);
+
+            // Last B-frame
+            while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
+            {  
+                qint64 posMs = getFramePosMs(frame);
+                if (m_isSeeking.load()) {
+                    if (posMs < m_seekTargetMs.load()) {
+                        av_frame_unref(frame);
+                        continue;
+                    } else {
+                        m_isSeeking.store(false);
+                    }
+                }
+                videoFrame vFrame;
+                vFrame.posMs = posMs;
+                vFrame.frame = cloneToSharedPtr(frame);
+
+                // Push frame to queue
+                if (!m_frameVQueue.push(vFrame)) {
+                    // If queue is full
+                    av_frame_unref(frame);
+                    break;
+                }
+                av_frame_unref(frame);
+            }
+
+            m_frameVQueue.push(videoFrame{});
+            break;
+        }
+
+        int ret = avcodec_send_packet(m_codecContextVideo, packet);
+        av_packet_free(&packet);
+
+        if (ret < 0) continue;
+
+        while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
+        {  
+            qint64 posMs = getFramePosMs(frame);
+            if (m_isSeeking.load()) {
+                if (posMs < m_seekTargetMs.load()) {
+                    av_frame_unref(frame);
+                    continue;
+                } else {
+                    m_isSeeking.store(false);
+                }
+            }
+            videoFrame vFrame;
+            vFrame.posMs = posMs;
+            vFrame.frame = cloneToSharedPtr(frame);
+
+            // Push frame to queue
+            if (!m_frameVQueue.push(vFrame)) {
+                // If queue is full
+                av_frame_unref(frame);
+                break;
+            }
+            av_frame_unref(frame);
+        }
+    }
+    av_frame_free(&frame);
+
+    emit finished();
 }
 
 void Decoder::stop()
@@ -288,6 +371,11 @@ void Decoder::seekTo(double posMs)
     }
 
     // Clear buffers
+    m_pktAQueue.clear();
+    m_pktVQueue.clear();
+    m_frameAQueue.clear();
+    m_frameVQueue.clear();
+
     AVFrame *frame = av_frame_alloc();
     while (avcodec_receive_frame(m_codecContextVideo, frame) == 0)
     {

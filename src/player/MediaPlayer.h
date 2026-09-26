@@ -54,7 +54,10 @@ private:
     void cleanupDecoder();
     void processNextFrame();
    
-    QThread m_decoderThread;
+    std::thread m_demuxThread;
+    std::thread m_videoDecodeThread;
+    // std::thread m_audioDecodeThread;
+
     ma_device m_audioDevice;
     Decoder *m_decoder      = nullptr; 
     QTimer *m_renderTimer   = nullptr;
