@@ -51,6 +51,11 @@ public:
     {
         QMutexLocker locker(&m_mutex);
 
+        while (m_queue.empty() && !m_abort) 
+        {
+            m_condNotEmpty.wait(&m_mutex);
+        }
+
         if (m_queue.empty() || m_abort) {
             // qDebug() << "FrameQueue: queue is empty";
             return false;
