@@ -6,8 +6,12 @@
 #include <QDebug>
 #include <QThread>
 #include <atomic>
+#include <chrono>
+#include <thread>
 
 extern "C" {
+#include <libavcodec/packet.h>
+#include <libavutil/error.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
@@ -187,7 +191,35 @@ void Decoder::processVideo()
 
 void Decoder::demuxLoop()
 {
-    /* comming soon */
+    while (m_running.load())
+    {
+        if (m_pktAQueue.isFull() || m_pktVQueue.isFull()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
+        AVPacket *packet = av_packet_alloc();
+
+        int ret = av_read_frame(m_formatContext, packet);
+        if (ret < 0) { // If any error
+            av_packet_free(&packet);
+
+            // end file
+            if (ret == AVERROR_EOF) {
+                m_pktAQueue.push(nullptr);
+                m_pktVQueue.push(nullptr);
+            }
+            break;
+        }
+
+        if (packet->stream_index == m_videoStreamIndex) {         // Video packet
+            m_pktVQueue.push(packet); 
+        } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
+            m_pktAQueue.push(packet);
+        } else {                                                  // Another
+            av_packet_free(&packet);
+        }
+    }
 }
 
 void Decoder::stop()
