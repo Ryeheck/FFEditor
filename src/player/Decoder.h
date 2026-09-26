@@ -36,9 +36,9 @@ public slots:
     void seek(double posMs); 
     void decodeVideoLoop();
     void demuxLoop();
-    
+
 private:
-    
+    void flushBuffers();
     void seekTo(double posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame) const;
@@ -57,6 +57,7 @@ private:
     std::atomic<bool> m_seekReq{false};
     std::atomic<double> m_seekTargetMs{0};
     std::atomic<bool> m_isSeeking{false};
+    std::atomic<bool> m_flushbuffers{false};
 
     int m_videoStreamIndex = -1;
     int m_audioStreamIndex = -1;

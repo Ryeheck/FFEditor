@@ -191,6 +191,10 @@ void Decoder::demuxLoop()
 
     while (m_running.load())
     {
+        if (m_seekReq.exchange(false)) {
+            seekTo(m_seekTargetMs.load());
+            continue;
+        }
 
         AVPacket *packet = av_packet_alloc();
 
@@ -232,11 +236,14 @@ void Decoder::decodeVideoLoop()
 
     while (m_running.load()) 
     {
+        if (m_flushbuffers.load()) {
+            flushBuffers();
+            continue;
+        }
+
         AVPacket *packet = nullptr;
         if (!m_pktVQueue.pop(packet)) 
             break;
-
-        // if (m_isSeeking.load()) {}
 
         // End file
         if (packet == nullptr) {
@@ -346,9 +353,6 @@ void Decoder::seekTo(double posMs)
         return;
     }
 
-    // clear queue
-    m_frameVQueue.clear();
-
     // Correct stream
     AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
 
@@ -370,26 +374,28 @@ void Decoder::seekTo(double posMs)
         return;
     }
 
-    // Clear buffers
-    m_pktAQueue.clear();
+    // clear queue
     m_pktVQueue.clear();
-    m_frameAQueue.clear();
-    m_frameVQueue.clear();
-
-    AVFrame *frame = av_frame_alloc();
-    while (avcodec_receive_frame(m_codecContextVideo, frame) == 0)
-    {
-        av_frame_unref(frame);
-    }
-    av_frame_free(&frame); 
-
-    avcodec_flush_buffers(m_codecContextVideo);
-
-    // if (audio)          avcodec_flush_buffers(audio);
+    m_pktAQueue.clear();
 
     // Flags
     m_isSeeking.store(true);
+    m_flushbuffers.store(true);
+}
 
+void Decoder::flushBuffers()
+{
+    if (!m_codecContextVideo || !m_flushbuffers.load())
+        return;
+    
+    avcodec_flush_buffers(m_codecContextVideo);
+    // if (audio)          avcodec_flush_buffers(audio);
+    
+    // Clear buffers
+    m_frameAQueue.clear();
+    m_frameVQueue.clear();
+
+    m_flushbuffers.store(false);
 }
 
 int64_t Decoder::getFramePosMs(const AVFrame *frame) const
