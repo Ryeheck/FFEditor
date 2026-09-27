@@ -245,11 +245,11 @@ void Decoder::demuxLoop()
                 av_packet_free(&packet);
                 break;
             }
-        } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
+        /* } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
             if (!m_pktAQueue.push(packet)) {
                 av_packet_free(&packet);
                 break;
-            }
+            } */
         } else {                                                  // Another
             av_packet_free(&packet);
         }
