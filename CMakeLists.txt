@@ -20,6 +20,7 @@ pkg_check_modules(FFMPEG REQUIRED
     libavformat
     libavutil
     libswscale
+    libswresample
 )
 
 include(FetchContent)
