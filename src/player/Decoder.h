@@ -6,12 +6,27 @@
 #include <QObject>
 #include <QImage>
 #include <atomic>
-#include <libavcodec/packet.h>
+#include <memory>
+#include <vector>
 
 extern "C" {
+#include <libavcodec/packet.h>
+#include "libswresample/swresample.h"
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 }
+
+using AVFramePtr = std::shared_ptr<AVFrame>;
+
+struct videoFrame {
+    AVFramePtr frame;
+    qint64 posMs;
+};
+
+struct audioFrame {
+    std::vector<float> samples;
+    qint64 posMs;
+};
 
 class Decoder : public QObject
 {
@@ -26,8 +41,8 @@ public:
     explicit Decoder(QObject *parent = nullptr);
     ~Decoder() override;
 
-    bool getNextFrame(videoFrame &vFrame);
-
+    bool getNextVFrame(videoFrame &vFrame);
+    bool getNextAFrame(audioFrame &aFrame);
 public slots:
     void processVideo();
     void stop();
@@ -36,8 +51,10 @@ public slots:
     void seek(double posMs); 
     void decodeVideoLoop();
     void demuxLoop();
+    void decodeAudioLoop();
 
 private:
+    bool initAudio();
     void flushBuffers();
     void seekTo(double posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
@@ -46,12 +63,13 @@ private:
     AVCodecContext *m_codecContextAudio = nullptr;
     AVCodecContext *m_codecContextVideo = nullptr;
     AVFormatContext *m_formatContext    = nullptr;
+    SwrContext *m_swrContext            = nullptr;
 
     FrameQueue<AVPacket *> m_pktVQueue;
     FrameQueue<AVPacket *> m_pktAQueue;
     
     FrameQueue<videoFrame> m_frameVQueue;
-    FrameQueue<videoFrame> m_frameAQueue;
+    FrameQueue<audioFrame> m_frameAQueue;
 
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_seekReq{false};

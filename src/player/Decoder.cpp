@@ -4,8 +4,10 @@
 #include <QString>
 #include <QDebug>
 #include <atomic>
+#include <cstdint>
 
 extern "C" {
+#include <libswresample/swresample.h>
 #include <libavcodec/packet.h>
 #include <libavutil/error.h>
 #include <libavcodec/avcodec.h>
@@ -26,21 +28,19 @@ bool Decoder::loadSource(const QString &filename)
 {
     // Close old video file
     clear();
-    
-    // Initialization codecs
-    AVCodecParameters *codecParams = nullptr;
-    const AVCodec *codec = nullptr;
 
     // Open new video file  
     if (avformat_open_input(&m_formatContext, filename.toUtf8().constData(), NULL, NULL) != 0) {
         qDebug() << "Couldn't open video file: " << filename;
-        goto cleanup;
+        clear();
+        return false;
     }
 
     // find stream info
     if (avformat_find_stream_info(m_formatContext, NULL) != 0) {
         qDebug() << "Couldn't find stream info";
-        goto cleanup;
+        clear();
+        return false;
     }
 
     // Current streams
@@ -60,7 +60,8 @@ bool Decoder::loadSource(const QString &filename)
     // Not any streams
     if (m_videoStreamIndex == -1 || m_audioStreamIndex == -1) {
         qDebug() << "Couldn't open stream";
-        goto cleanup;
+        clear();
+        return false;
     }
 
     // Send duration in UI
@@ -71,22 +72,25 @@ bool Decoder::loadSource(const QString &filename)
     }
 
     // Open codecs
-    codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
-    codec = avcodec_find_decoder(codecParams->codec_id);
+    AVCodecParameters *codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
+    const AVCodec *codec = avcodec_find_decoder(codecParams->codec_id);
 
     // Video codec
     m_codecContextVideo = avcodec_alloc_context3(codec);
     if (!m_codecContextVideo) {
         qDebug() << "Couldn't allocate codec context";
-        goto cleanup;
+        clear();
+        return false;
     }
     if (avcodec_parameters_to_context(m_codecContextVideo, codecParams) != 0) {
         qDebug() << "Couldn't copy codec params to codec context";
-        goto cleanup;
+        clear();
+        return false;
     }
     if (avcodec_open2(m_codecContextVideo, codec, NULL) != 0) {
         qDebug() << "Couldn't open codec";
-        goto cleanup;
+        clear();
+        return false;
     }
 
     // Open codecs
@@ -97,30 +101,56 @@ bool Decoder::loadSource(const QString &filename)
     m_codecContextAudio = avcodec_alloc_context3(codec);
     if (!m_codecContextAudio) {
         qDebug() << "Couldn't allocate codec context";
-        goto cleanup;
+        clear();
+        return false;
     }
     if (avcodec_parameters_to_context(m_codecContextAudio, codecParams) != 0) {
         qDebug() << "Couldn't copy codec params to codec context";
-        goto cleanup;
+        clear();
+        return false;
     }
     if (avcodec_open2(m_codecContextAudio, codec, NULL) != 0) {
         qDebug() << "Couldn't open codec";
-        goto cleanup;
+        clear();
+        return false;
     }
+
+    // Init audio
+    if (!initAudio())
+        return false;
+
 
     return true;
+}
 
-cleanup:
-    if (m_codecContextVideo)  
-        avcodec_free_context(&m_codecContextVideo);
-    if (m_codecContextAudio)
-        avcodec_free_context(&m_codecContextAudio);
-
-    if (m_formatContext) {
-        avformat_close_input(&m_formatContext);
-        avformat_free_context(m_formatContext);
+bool Decoder::initAudio()
+{
+    if (!m_codecContextAudio) {
+        qDebug() << "contextAudio not init";
+        return false;
     }
-    return false;
+    if (m_swrContext)
+        swr_free(&m_swrContext);
+
+    AVChannelLayout chLayout = AV_CHANNEL_LAYOUT_STEREO;
+    int ret = swr_alloc_set_opts2(&m_swrContext, 
+                                  &chLayout, 
+                                  AV_SAMPLE_FMT_FLT, 
+                                  48000, 
+                                  &m_codecContextAudio->ch_layout,
+                                  m_codecContextAudio->sample_fmt,
+                                  m_codecContextAudio->sample_rate, 
+                                  0, nullptr);
+    
+    if (ret < 0 || !m_swrContext) {
+        qDebug() << "Failed to allocate swrContext: " << ret;
+        return false;
+    }
+    if (swr_init(m_swrContext) < 0) {
+        qDebug() << "Couldn't init swrContext";
+        return false;
+    }
+    return true;
 }
 
 void Decoder::processVideo()
@@ -215,13 +245,11 @@ void Decoder::demuxLoop()
                 av_packet_free(&packet);
                 break;
             }
-
-        /* } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
+        } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
             if (!m_pktAQueue.push(packet)) {
                 av_packet_free(&packet);
                 break;
             }
-            */
         } else {                                                  // Another
             av_packet_free(&packet);
         }
@@ -312,6 +340,67 @@ void Decoder::decodeVideoLoop()
     emit finished();
 }
 
+void Decoder::decodeAudioLoop() // Prototype
+{
+    m_running.store(true);
+    
+    AVFrame *frame = av_frame_alloc();
+
+    while (m_running.load()) 
+    {
+        if (m_flushbuffers.load()) {
+            flushBuffers();
+            continue;
+        }
+
+        AVPacket *packet = nullptr;
+        if (!m_pktAQueue.pop(packet)) 
+            break;
+
+        // End file
+        if (packet == nullptr) {
+            m_frameAQueue.push(audioFrame{});
+            break;
+        }
+
+        int ret = avcodec_send_packet(m_codecContextAudio, packet);
+        av_packet_free(&packet);
+
+        if (ret < 0) continue;
+
+        while (m_running.load() && avcodec_receive_frame(m_codecContextAudio, frame) == 0) // FRAME LOAD
+        {  
+            qint64 posMs = getFramePosMs(frame);
+
+            audioFrame aFrame;
+            aFrame.posMs = posMs;
+
+            //  maxOutSamples = (delay + in_rate) * 48000 / in_rate
+            int maxOutSamples = av_rescale_rnd(swr_get_delay(m_swrContext, m_codecContextAudio->sample_rate) + frame->nb_samples, 
+                                               48000, m_codecContextAudio->sample_rate, AV_ROUND_UP);
+
+            // Alloc for STEREO
+            aFrame.samples.resize(maxOutSamples * 2);
+            uint8_t *outData = reinterpret_cast<uint8_t *>(aFrame.samples.data());
+
+            int samples = swr_convert(m_swrContext, &outData, maxOutSamples, 
+                                  (const uint8_t **)frame->data, frame->nb_samples);
+                
+            // Actuall samples for STEREO
+            aFrame.samples.resize(samples * 2);
+
+            // Push frame to queue
+            if (!m_frameAQueue.push(aFrame)) {
+                // If queue is full
+                av_frame_unref(frame);
+                break;
+            }
+            av_frame_unref(frame);
+        }
+    }
+    av_frame_free(&frame);
+}
+
 void Decoder::stop()
 {
     m_running.store(false);
@@ -336,6 +425,7 @@ void Decoder::clear()
     if (m_codecContextVideo)  avcodec_free_context(&m_codecContextVideo);
     if (m_codecContextAudio)  avcodec_free_context(&m_codecContextAudio);
     if (m_formatContext)      avformat_close_input(&m_formatContext);
+    if (m_swrContext)         swr_free(&m_swrContext);
 }
 
 void Decoder::seek(double posMs)
@@ -385,11 +475,11 @@ void Decoder::seekTo(double posMs)
 
 void Decoder::flushBuffers()
 {
-    if (!m_codecContextVideo || !m_flushbuffers.load())
+    if (!m_codecContextVideo || !m_flushbuffers.load() || !m_codecContextAudio)
         return;
     
     avcodec_flush_buffers(m_codecContextVideo);
-    // if (audio)          avcodec_flush_buffers(audio);
+    avcodec_flush_buffers(m_codecContextAudio);
     
     // Clear buffers
     m_frameAQueue.clear();
@@ -429,9 +519,14 @@ AVFramePtr Decoder::cloneToSharedPtr(AVFrame *frame)
     return AVFramePtr(dstFrame, [](AVFrame *frame) {  av_frame_free(&frame);  });
 }
 
-bool Decoder::getNextFrame(videoFrame &vFrame)
+bool Decoder::getNextVFrame(videoFrame &vFrame)
 {
     return m_frameVQueue.pop(vFrame);
+}
+
+bool Decoder::getNextAFrame(audioFrame &aFrame)
+{
+    return m_frameAQueue.pop(aFrame);
 }
 
 Decoder::~Decoder()
