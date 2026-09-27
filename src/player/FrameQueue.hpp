@@ -4,7 +4,6 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QWaitCondition>
-#include <memory>
 #include <queue>
 #include <QDebug>
 
@@ -12,13 +11,6 @@ extern "C" {
 #include <libavutil/frame.h>
 #include <libavcodec/packet.h>
 }
-
-using AVFramePtr = std::shared_ptr<AVFrame>;
-
-struct videoFrame {
-    AVFramePtr frame;
-    qint64 posMs;
-};
 
 template <typename T>
 class FrameQueue

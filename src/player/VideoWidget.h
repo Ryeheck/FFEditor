@@ -1,7 +1,7 @@
 #ifndef VIDEOWIDGET_H
 #define VIDEOWIDGET_H
 
-#include "FrameQueue.hpp"
+#include "Decoder.h"
 
 #include <QWidget>
 #include <QImage>

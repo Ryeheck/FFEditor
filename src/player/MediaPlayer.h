@@ -2,7 +2,6 @@
 #define MEDIAPLAYER_H
 
 #include "Decoder.h"
-#include "FrameQueue.hpp"
 
 #include <QAudioOutput>
 #include <QImage>
@@ -56,7 +55,7 @@ private:
    
     std::thread m_demuxThread;
     std::thread m_videoDecodeThread;
-    // std::thread m_audioDecodeThread;
+    std::thread m_audioDecodeThread;
 
     ma_device m_audioDevice;
     Decoder *m_decoder      = nullptr; 

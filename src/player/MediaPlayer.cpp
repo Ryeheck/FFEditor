@@ -44,7 +44,7 @@ void MediaPlayer::processNextFrame()
 {
     videoFrame vFrame;
 
-    if (m_decoder->getNextFrame(vFrame)) {
+    if (m_decoder->getNextVFrame(vFrame)) {
         if (!vFrame.frame)  return;
 
         emit frameChanged(vFrame.frame);
