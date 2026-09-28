@@ -1,17 +1,11 @@
-#define MINIAUDIO_IMPLEMENTATION
-
 #include "MediaPlayer.h"
 #include "Decoder.h"
-#include "miniaudio.h"
 
 #include <qobject.h>
 #include <QAudioOutput>
 #include <QDebug>
 #include <QImage>
 #include <QTimer>
-#include <algorithm>
-#include <cstddef>
-#include <utility>
 
 MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
@@ -22,68 +16,13 @@ MediaPlayer::MediaPlayer(QObject *parent)
     
 }
 
-bool MediaPlayer::initAudio()
-{
-    ma_device_config config = ma_device_config_init(ma_device_type_playback);
-    config.playback.format   = ma_format_f32; // Works with float32 ([-1 : 1])
-    config.playback.channels = 2;             // Stereo
-    config.sampleRate        = 48000;         // Ghz
-    config.dataCallback      = audioCallback; // Function
-    config.pUserData         = this;          // Ptr on this player
-
-    if (ma_device_init(NULL, &config, &m_audioDevice) != MA_SUCCESS)
-        return false;
-    
-    m_audioInit = true;
-    return true;
-}
-
-void MediaPlayer::audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
-{
-    MediaPlayer *player = static_cast<MediaPlayer *>(pDevice->pUserData);
-
-    if (player)
-        player->processNextAFrame(static_cast<float *>(pOutput), frameCount);
-}
-
-void MediaPlayer::processNextAFrame(float *pOutput, ma_uint32 frameCount)
-{
-    // STEREO
-    size_t samplesNeeded = frameCount * 2;
-    size_t samplesFilled = 0;
-
-    while (samplesFilled < samplesNeeded) 
-    {
-        if (m_aFrameOffset >= m_aFrame.samples.size()) {
-            audioFrame nextFrame;
-
-            if (m_decoder && m_decoder->getNextAFrame(nextFrame)) {
-                m_aFrame = std::move(nextFrame);
-                m_aFrameOffset = 0;
-            } else {
-                std::fill_n(pOutput + samplesFilled, samplesNeeded - samplesFilled, 0.0f);
-                break;
-            }
-        }
-        size_t samplesAvailable = m_aFrame.samples.size() - m_aFrameOffset;
-        size_t samplesToCopy = std::min(samplesNeeded -  samplesFilled, samplesAvailable);
-        std::copy_n(m_aFrame.samples.data() + m_aFrameOffset,
-                    samplesToCopy,
-                    pOutput + samplesFilled);
-        
-        m_aFrameOffset += samplesToCopy;
-        samplesFilled += samplesToCopy;
-
-    }
-
-}
-
 void MediaPlayer::processNextVFrame()
 {
     videoFrame vFrame;
 
     if (m_decoder->getNextVFrame(vFrame)) {
         if (!vFrame.frame)  return;
+        // if (vFrame.posMs > m_playedAudioSamples)  return;
 
         emit frameChanged(vFrame.frame);
 
@@ -123,7 +62,7 @@ bool MediaPlayer::loadVideo(const QString &path)
 {  
     cleanupDecoder();
     initDecoder();
-    initAudio();
+    // initAudio();
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Couldn't open video file: " << path;
@@ -144,10 +83,10 @@ void MediaPlayer::play()
     if (m_state == playbackState::Playing) return;
     m_state = playbackState::Playing;
 
-    if (ma_device_start(&m_audioDevice) != MA_SUCCESS) {
+    /*if (ma_device_start(&m_audioDevice) != MA_SUCCESS) {
         ma_device_uninit(&m_audioDevice);
         return;
-    }
+    }*/
 
     m_renderTimer->start(16);
         
@@ -168,6 +107,9 @@ void MediaPlayer::onPositionChanged(qint64 pos)
 {
     if (m_decoder)
         m_decoder->seek(pos);
+    // if (m_audioInit)
+
+
 }
 
 void MediaPlayer::pause() 

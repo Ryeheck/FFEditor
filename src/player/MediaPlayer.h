@@ -7,12 +7,11 @@
 #include <QImage>
 #include <QThread>
 #include <QTimer>
-#include <cstddef>
+#include <qtypes.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
-#include "miniaudio.h"
 }
 
 enum class playbackState {
@@ -48,25 +47,17 @@ private slots:
 
 
 private:
-    static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
-    bool initAudio();
     bool initDecoder();
     void cleanupDecoder();
     void processNextVFrame();
-    void processNextAFrame(float *pOutput, ma_uint32 frameCount);
 
     std::thread m_demuxThread;
     std::thread m_videoDecodeThread;
     std::thread m_audioDecodeThread;
 
-    ma_device m_audioDevice;
     Decoder *m_decoder      = nullptr; 
     QTimer *m_renderTimer   = nullptr;
     playbackState m_state   = playbackState::Stopped;
-    bool m_audioInit        = false;
-    
-    audioFrame m_aFrame;
-    size_t m_aFrameOffset;
     
 };
 

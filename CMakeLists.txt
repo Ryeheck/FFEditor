@@ -51,6 +51,8 @@ qt_add_executable(FFEditor
     src/player/FrameQueue.hpp
     src/player/VideoWidget.h
     src/player/VideoWidget.cpp
+    src/player/AudioOutput.cpp
+    src/player/AudioOutput.h
 
 )
 
