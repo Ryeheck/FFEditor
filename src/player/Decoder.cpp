@@ -17,9 +17,9 @@ extern "C" {
 
 Decoder::Decoder(QObject *parent) : QObject(parent),
                                     m_pktVQueue(300),
-                                    m_pktAQueue(100),
+                                    m_pktAQueue(300),
                                     m_frameVQueue(15),
-                                    m_frameAQueue(100)
+                                    m_frameAQueue(300)
 {
     
 }
@@ -245,11 +245,11 @@ void Decoder::demuxLoop()
                 av_packet_free(&packet);
                 break;
             }
-        /* } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
+        } else if (packet->stream_index == m_audioStreamIndex) {  // Audio packet
             if (!m_pktAQueue.push(packet)) {
                 av_packet_free(&packet);
                 break;
-            } */
+            }
         } else {                                                  // Another
             av_packet_free(&packet);
         }

@@ -7,6 +7,7 @@
 #include <QImage>
 #include <QThread>
 #include <QTimer>
+#include <cstddef>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -51,8 +52,9 @@ private:
     bool initAudio();
     bool initDecoder();
     void cleanupDecoder();
-    void processNextFrame();
-   
+    void processNextVFrame();
+    void processNextAFrame(float *pOutput, ma_uint32 frameCount);
+
     std::thread m_demuxThread;
     std::thread m_videoDecodeThread;
     std::thread m_audioDecodeThread;
@@ -62,6 +64,10 @@ private:
     QTimer *m_renderTimer   = nullptr;
     playbackState m_state   = playbackState::Stopped;
     bool m_audioInit        = false;
+    
+    audioFrame m_aFrame;
+    size_t m_aFrameOffset;
+    
 };
 
 #endif // MEDIAPLAYER_H

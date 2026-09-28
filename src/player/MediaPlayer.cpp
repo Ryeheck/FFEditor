@@ -9,12 +9,15 @@
 #include <QDebug>
 #include <QImage>
 #include <QTimer>
+#include <algorithm>
+#include <cstddef>
+#include <utility>
 
 MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
 {
     m_renderTimer = new QTimer(this);
-    connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
+    connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextVFrame);
 
     
 }
@@ -37,10 +40,45 @@ bool MediaPlayer::initAudio()
 
 void MediaPlayer::audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
-    /* Comming soon... */
+    MediaPlayer *player = static_cast<MediaPlayer *>(pDevice->pUserData);
+
+    if (player)
+        player->processNextAFrame(static_cast<float *>(pOutput), frameCount);
 }
 
-void MediaPlayer::processNextFrame()
+void MediaPlayer::processNextAFrame(float *pOutput, ma_uint32 frameCount)
+{
+    // STEREO
+    size_t samplesNeeded = frameCount * 2;
+    size_t samplesFilled = 0;
+
+    while (samplesFilled < samplesNeeded) 
+    {
+        if (m_aFrameOffset >= m_aFrame.samples.size()) {
+            audioFrame nextFrame;
+
+            if (m_decoder && m_decoder->getNextAFrame(nextFrame)) {
+                m_aFrame = std::move(nextFrame);
+                m_aFrameOffset = 0;
+            } else {
+                std::fill_n(pOutput + samplesFilled, samplesNeeded - samplesFilled, 0.0f);
+                break;
+            }
+        }
+        size_t samplesAvailable = m_aFrame.samples.size() - m_aFrameOffset;
+        size_t samplesToCopy = std::min(samplesNeeded -  samplesFilled, samplesAvailable);
+        std::copy_n(m_aFrame.samples.data() + m_aFrameOffset,
+                    samplesToCopy,
+                    pOutput + samplesFilled);
+        
+        m_aFrameOffset += samplesToCopy;
+        samplesFilled += samplesToCopy;
+
+    }
+
+}
+
+void MediaPlayer::processNextVFrame()
 {
     videoFrame vFrame;
 
@@ -60,7 +98,7 @@ void MediaPlayer::cleanupDecoder()
 
         if (m_demuxThread.joinable())       m_demuxThread.join();
         if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
-        // if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+        if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
 
         m_decoder->deleteLater();
         m_decoder = nullptr;
@@ -85,6 +123,7 @@ bool MediaPlayer::loadVideo(const QString &path)
 {  
     cleanupDecoder();
     initDecoder();
+    initAudio();
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Couldn't open video file: " << path;
@@ -94,9 +133,9 @@ bool MediaPlayer::loadVideo(const QString &path)
     
     m_demuxThread       = std::thread(&Decoder::demuxLoop, m_decoder);
     m_videoDecodeThread = std::thread(&Decoder::decodeVideoLoop, m_decoder);
-    // m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);
+    m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);
 
-    // initAudio();
+    
     return true;
 }
 
@@ -104,6 +143,11 @@ void MediaPlayer::play()
 {
     if (m_state == playbackState::Playing) return;
     m_state = playbackState::Playing;
+
+    if (ma_device_start(&m_audioDevice) != MA_SUCCESS) {
+        ma_device_uninit(&m_audioDevice);
+        return;
+    }
 
     m_renderTimer->start(16);
         
