@@ -1,5 +1,6 @@
 #include "Decoder.h"
 #include <cstdint>
+#include <qdebug.h>
 #include <qtypes.h>
 #define MINIAUDIO_IMPLEMENTATION
 
@@ -18,7 +19,8 @@ AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 
 AudioOutput::~AudioOutput()
 {
-
+    stop();
+    qDebug() << "AudioOutput: ok";
 }
 
 bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate)
@@ -33,8 +35,10 @@ bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate)
     config.dataCallback      = audioCallback; // Function
     config.pUserData         = this;          // Ptr on this player
 
-    if (ma_device_init(NULL, &config, &m_audioDevice) != MA_SUCCESS)
+    if (ma_device_init(NULL, &config, &m_audioDevice) != MA_SUCCESS) {
+        qDebug() << "AudioOutput: can't init audio";
         return false;
+    }
 
     m_aFrameOffset = 0;
     m_playedAudioSamples.store(0);
@@ -87,8 +91,16 @@ void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
 void AudioOutput::start()
 {
     if (m_init && ma_device_start(&m_audioDevice) != MA_SUCCESS) {
+        stop();
+        qDebug() << "AudioOutput: can't start audio";
+    }
+}
+
+void AudioOutput::stop()
+{
+    if (m_init) {
         ma_device_uninit(&m_audioDevice);
-        return;
+        m_init = false;
     }
 }
 

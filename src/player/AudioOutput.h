@@ -29,6 +29,7 @@ public slots:
     bool init(Decoder *decoder, uint64_t samplesRate);
     void seekTo(qint64 posMs);
     qint64 getAudioClockMs();
+    void stop();
     
 private:
     static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
