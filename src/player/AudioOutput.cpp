@@ -1,3 +1,6 @@
+#include "Decoder.h"
+#include <cstdint>
+#include <qtypes.h>
 #define MINIAUDIO_IMPLEMENTATION
 
 #include "AudioOutput.h"
@@ -86,11 +89,15 @@ void AudioOutput::start()
     if (m_init && ma_device_start(&m_audioDevice) != MA_SUCCESS) {
         ma_device_uninit(&m_audioDevice);
         return;
+    }
 }
 
-void AudioOutput::seekTo()
+void AudioOutput::seekTo(qint64 posMs)
 {
-
+    uint64_t targetSamples = (static_cast<uint64_t>(posMs) * m_sampleRate) / 1000;
+    m_playedAudioSamples.store(targetSamples);
+    m_aFrameOffset = 0;
+    m_aFrame = audioFrame{};
 }
 
 qint64 AudioOutput::getAudioClockMs()
