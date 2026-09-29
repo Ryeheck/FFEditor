@@ -22,21 +22,23 @@ signals:
 public:
     explicit AudioOutput(QObject *parent = nullptr);
     ~AudioOutput() override;
-    bool initAudio();
+    
     
 public slots:
-   
+    void start();
+    bool init(Decoder *decoder, uint64_t samplesRate);
 
 private:
     static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
-    void processNextAFrame(float *pOutput, ma_uint32 frameCount);
+    void readSamples(float *pOutput, ma_uint32 frameCount);
     qint64 getAudioClockMs();
 
     ma_device m_audioDevice;
-    bool m_audioInit        = false;
+    bool m_init = false;
     Decoder *m_decoder = nullptr;
     audioFrame m_aFrame;
     size_t m_aFrameOffset;
+    uint64_t m_sampleRate;
     std::atomic<uint64_t> m_playedAudioSamples{0};
 };
 

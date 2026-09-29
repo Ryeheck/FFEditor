@@ -18,19 +18,26 @@ AudioOutput::~AudioOutput()
 
 }
 
-bool AudioOutput::initAudio()
+bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate)
 {
+    m_decoder = decoder;
+    m_sampleRate = sampleRate;
+
     ma_device_config config = ma_device_config_init(ma_device_type_playback);
     config.playback.format   = ma_format_f32; // Works with float32 ([-1 : 1])
     config.playback.channels = 2;             // Stereo
-    config.sampleRate        = 48000;         // Ghz
+    config.sampleRate        = m_sampleRate;         // Ghz
     config.dataCallback      = audioCallback; // Function
     config.pUserData         = this;          // Ptr on this player
 
     if (ma_device_init(NULL, &config, &m_audioDevice) != MA_SUCCESS)
         return false;
-    
-    m_audioInit = true;
+
+    m_aFrameOffset = 0;
+    m_playedAudioSamples.store(0);
+    m_aFrame = audioFrame{};
+    m_init = true;
+
     return true;
 }
 
@@ -38,11 +45,11 @@ void AudioOutput::audioCallback(ma_device *pDevice, void *pOutput, const void *p
 {
     AudioOutput *player = static_cast<AudioOutput *>(pDevice->pUserData);
 
-    if (player)
-        player->processNextAFrame(static_cast<float *>(pOutput), frameCount);
+    if (player && m_init)
+        player->readSamples(static_cast<float *>(pOutput), frameCount);
 }
 
-void AudioOutput::processNextAFrame(float *pOutput, ma_uint32 frameCount)
+void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
 {
     // STEREO
     size_t samplesNeeded = frameCount * 2;
@@ -74,8 +81,19 @@ void AudioOutput::processNextAFrame(float *pOutput, ma_uint32 frameCount)
     m_playedAudioSamples.fetch_add(frameCount);
 }
 
+void AudioOutput::start()
+{
+    if (m_init && ma_device_start(&m_audioDevice) != MA_SUCCESS) {
+        ma_device_uninit(&m_audioDevice);
+        return;
+}
+
+void AudioOutput::seekTo()
+{
+
+}
+
 qint64 AudioOutput::getAudioClockMs()
 {
-    // For STEREO
-    return static_cast<qint64>((m_playedAudioSamples.load() * 1000) / 48000);
+    return static_cast<qint64>((m_playedAudioSamples.load() * 1000) / m_sampleRate);
 }
