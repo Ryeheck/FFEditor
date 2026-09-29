@@ -17,7 +17,11 @@ class FrameQueue
 {
 public:
     explicit FrameQueue(size_t maxSize = 15) : m_maxSize(maxSize), m_abort(false) {}
-    ~FrameQueue() {  clear();  }
+    ~FrameQueue() 
+    {  
+        clear();  
+        qDebug() << "FrameQueue: ok";
+    }
 
     bool push(const T &value)
     {
