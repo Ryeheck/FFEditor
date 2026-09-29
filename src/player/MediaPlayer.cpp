@@ -1,4 +1,5 @@
 #include "MediaPlayer.h"
+#include "AudioOutput.h"
 #include "Decoder.h"
 
 #include <qobject.h>
@@ -6,6 +7,7 @@
 #include <QDebug>
 #include <QImage>
 #include <QTimer>
+#include <qtypes.h>
 
 MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
@@ -19,10 +21,14 @@ MediaPlayer::MediaPlayer(QObject *parent)
 void MediaPlayer::processNextVFrame()
 {
     videoFrame vFrame;
+    qint64 aPosMs = 0;
+
+    if (m_audio)
+        aPosMs = m_audio->getAudioClockMs();
 
     if (m_decoder->getNextVFrame(vFrame)) {
-        if (!vFrame.frame)  return;
-        // if (vFrame.posMs > m_playedAudioSamples)  return;
+        if (!vFrame.frame)          return;
+        if (vFrame.posMs > aPosMs)  return;
 
         emit frameChanged(vFrame.frame);
 
@@ -58,11 +64,19 @@ bool MediaPlayer::initDecoder()
     return true;
 }
 
+bool MediaPlayer::initAudio()
+{
+    m_audio = new AudioOutput();
+
+    // connects
+    return true;
+}
+
 bool MediaPlayer::loadVideo(const QString &path) 
 {  
     cleanupDecoder();
     initDecoder();
-    // initAudio();
+    initAudio();
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Couldn't open video file: " << path;
@@ -107,7 +121,8 @@ void MediaPlayer::onPositionChanged(qint64 pos)
 {
     if (m_decoder)
         m_decoder->seek(pos);
-    // if (m_audioInit)
+    if (m_audio)
+        m_audio->seekTo(pos);
 
 
 }

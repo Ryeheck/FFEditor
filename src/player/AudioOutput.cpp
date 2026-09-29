@@ -48,7 +48,7 @@ void AudioOutput::audioCallback(ma_device *pDevice, void *pOutput, const void *p
 {
     AudioOutput *player = static_cast<AudioOutput *>(pDevice->pUserData);
 
-    if (player && m_init)
+    if (player)
         player->readSamples(static_cast<float *>(pOutput), frameCount);
 }
 

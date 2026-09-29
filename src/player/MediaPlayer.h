@@ -1,6 +1,7 @@
 #ifndef MEDIAPLAYER_H
 #define MEDIAPLAYER_H
 
+#include "AudioOutput.h"
 #include "Decoder.h"
 
 #include <QAudioOutput>
@@ -47,6 +48,7 @@ private slots:
 
 
 private:
+    bool initAudio();
     bool initDecoder();
     void cleanupDecoder();
     void processNextVFrame();
@@ -55,6 +57,7 @@ private:
     std::thread m_videoDecodeThread;
     std::thread m_audioDecodeThread;
 
+    AudioOutput *m_audio    = nullptr;
     Decoder *m_decoder      = nullptr; 
     QTimer *m_renderTimer   = nullptr;
     playbackState m_state   = playbackState::Stopped;
