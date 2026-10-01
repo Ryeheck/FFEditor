@@ -96,6 +96,12 @@ void AudioOutput::start()
     }
 }
 
+void AudioOutput::setVolume(const float &volume)
+{
+    if (m_init)
+        ma_device_set_master_volume(&m_audioDevice, volume);
+}
+
 void AudioOutput::stop()
 {
     if (m_init) {
@@ -106,7 +112,12 @@ void AudioOutput::stop()
 
 void AudioOutput::seekTo(qint64 posMs)
 {
-    uint64_t targetSamples = (static_cast<uint64_t>(posMs) * m_sampleRate) / 1000;
+    uint64_t targetSamples;
+    if (!posMs || !m_sampleRate)  
+        targetSamples = 0;
+    else                          
+        targetSamples = (static_cast<uint64_t>(posMs) * m_sampleRate) / 1000;
+    
     m_playedAudioSamples.store(targetSamples);
     m_aFrameOffset = 0;
     m_aFrame = audioFrame{};
@@ -114,5 +125,6 @@ void AudioOutput::seekTo(qint64 posMs)
 
 qint64 AudioOutput::getAudioClockMs()
 {
+    if (m_playedAudioSamples.load() == 0)  return 0;
     return static_cast<qint64>((m_playedAudioSamples.load() * 1000) / m_sampleRate);
 }
