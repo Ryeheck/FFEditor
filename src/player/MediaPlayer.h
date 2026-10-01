@@ -29,12 +29,11 @@ signals:
     void positionChanged(qint64 pos);
     void durationChanged(qint64 duration);
     void frameChanged(const AVFramePtr &vFrame);
-
+    void volumeChanged(const float &value);
 public:
     explicit MediaPlayer(QObject *parent = nullptr);
     ~MediaPlayer() override;
 
-    void setVolume(float value) {  /* m_audioOutput->setVolume(value); */ };
 
     bool loadVideo(const QString &path);
     void pause();

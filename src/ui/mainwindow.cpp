@@ -71,7 +71,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Volume songs
     volumeSlider = new CustomVolume(this);
-    connect(volumeSlider, &CustomVolume::valueChanged, player, &MediaPlayer::setVolume);
+    connect(volumeSlider, &CustomVolume::valueChanged, player, &MediaPlayer::volumeChanged);
     volumeSlider->setValue(10);
     pnToolslLayout->addWidget(volumeSlider);
     
