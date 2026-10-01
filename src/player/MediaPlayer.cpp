@@ -2,6 +2,7 @@
 #include "AudioOutput.h"
 #include "Decoder.h"
 
+#include <qdebug.h>
 #include <qobject.h>
 #include <QAudioOutput>
 #include <QDebug>
@@ -28,7 +29,9 @@ void MediaPlayer::processNextVFrame()
 
     if (m_decoder->getNextVFrame(vFrame)) {
         if (!vFrame.frame)          return;
-        if (vFrame.posMs > aPosMs)  return;
+        if (vFrame.posMs > aPosMs) {
+            m_audio->seekTo(vFrame.posMs); // Prototype
+        }
 
         emit frameChanged(vFrame.frame);
 
@@ -68,7 +71,17 @@ bool MediaPlayer::initAudio()
 {
     m_audio = new AudioOutput();
 
-    // connects
+    if (!m_decoder) {
+        qDebug() << "Core: Decoder not init";
+        return false;
+    }
+    if (!m_audio->init(m_decoder, 48000)) {
+        qDebug() << "Core: Coulnd't init audio";
+        return false;
+    }
+
+    connect(this, &MediaPlayer::volumeChanged, m_audio, &AudioOutput::setVolume);
+
     return true;
 }
 
@@ -79,7 +92,7 @@ bool MediaPlayer::loadVideo(const QString &path)
     initAudio();
 
     if (!m_decoder->loadSource(path)) {
-        qDebug() << "Couldn't open video file: " << path;
+        qDebug() << "Core: Couldn't open video file: " << path;
         cleanupDecoder();
         return false;
     }
@@ -97,13 +110,26 @@ void MediaPlayer::play()
     if (m_state == playbackState::Playing) return;
     m_state = playbackState::Playing;
 
-    /*if (ma_device_start(&m_audioDevice) != MA_SUCCESS) {
-        ma_device_uninit(&m_audioDevice);
+    if (m_audio) {
+        qDebug() << "Core: Audio start..";
+        m_audio->start();        
+    } else {
+        qDebug() << "Core: Audio not init";
+        // int ret = initAudio();
+    }
+    if (!m_decoder) {
+        qDebug() << "Core: Decoder not init";
+        // int ret = initDecoder();
         return;
-    }*/
-
-    m_renderTimer->start(16);
-        
+    }
+    if (m_renderTimer) {
+        qDebug() << "Core: Timer start..";
+        qDebug() << "Core: Decoder start..";
+        m_renderTimer->start(16);
+    } else {
+        qDebug() << "Core: Timer not init";
+        // int ret = initTimer();
+    }
 }
 
 void MediaPlayer::stop()
@@ -142,5 +168,5 @@ MediaPlayer::~MediaPlayer()
     if (m_renderTimer)
         m_renderTimer->deleteLater();
 
-    qDebug() << "MediaPlayer: ok";
+    qDebug() << "Core: MediaPlayer send ok";
 }
