@@ -20,7 +20,7 @@ public:
     ~FrameQueue() 
     {  
         clear();  
-        qDebug() << "FrameQueue: ok";
+        qDebug() << "FrameQueue destroy";
     }
 
     bool push(const T &value)

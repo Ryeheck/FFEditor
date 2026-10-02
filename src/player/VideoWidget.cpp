@@ -91,5 +91,5 @@ VideoWidget::~VideoWidget()
         sws_freeContext(m_swsCtx);
         m_swsCtx = nullptr;
     }
-    qDebug() << "VideoWidget: ok";
+    qDebug() << "VideoWidget destroy";
 }

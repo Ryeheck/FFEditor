@@ -533,5 +533,5 @@ Decoder::~Decoder()
 {
     clear();
     
-    qDebug() << "Decoder: ok";
+    qDebug() << "Decoder destroy";
 }

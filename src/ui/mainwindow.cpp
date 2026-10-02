@@ -37,9 +37,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     });
     
     QToolButton *startBtn = new QToolButton(this);
-    connect(startBtn, &QToolButton::clicked, this, [this] () {
-        loader->show();
-    });
+    connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
 
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     startBtn->setIcon(QIcon(":/icons/iconStart2.png"));
@@ -112,5 +110,5 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 MainWindow::~MainWindow()
 {
-    qDebug() << "MainWindow: ok";
+    qDebug() << "MainWindow destroy";
 }
