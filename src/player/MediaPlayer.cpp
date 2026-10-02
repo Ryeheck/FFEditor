@@ -22,14 +22,13 @@ MediaPlayer::MediaPlayer(QObject *parent)
 void MediaPlayer::processNextVFrame()
 {
     videoFrame vFrame;
-    qint64 aPosMs = 0;
-
-    if (m_audio)
-        aPosMs = m_audio->getAudioClockMs();
-
+    
     if (m_decoder->getNextVFrame(vFrame)) {
-        if (!vFrame.frame)          return;
+        if (!vFrame.frame)  return;
 
+        qint64 aPosMs = vFrame.posMs;
+        if (m_audio)  aPosMs = m_audio->getAudioClockMs();
+        
         qint64 posRange = vFrame.posMs - aPosMs;
         if (posRange < -35 || posRange > 35) {
             m_audio->seekTo(vFrame.posMs); // Prototype
@@ -168,5 +167,5 @@ MediaPlayer::~MediaPlayer()
     if (m_renderTimer)
         m_renderTimer->deleteLater();
 
-    qDebug() << "Core: MediaPlayer send ok";
+    qDebug() << "MediaPlayer destroy";
 }
