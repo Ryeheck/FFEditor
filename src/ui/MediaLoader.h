@@ -19,9 +19,6 @@ public:
 private slots:
     void onAddButtonClicked();
 
-signals:
-    void startPlayRequested(const QString &path);
-
 private:
     QListWidget *m_listWidget;
     QTabWidget  *m_tabWidget;

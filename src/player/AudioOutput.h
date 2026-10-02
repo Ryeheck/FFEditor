@@ -19,9 +19,6 @@ enum class AudioFormat {
 class AudioOutput : public QObject
 {
     Q_OBJECT
-
-signals:
-    
     
 public:
     explicit AudioOutput(QObject *parent = nullptr);

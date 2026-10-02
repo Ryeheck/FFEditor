@@ -5,12 +5,16 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QPainterPath>
+#include <qtypes.h>
+
+#include "../EventBus.h"
 
 class CustomPlayhead : public QWidget
 {
     Q_OBJECT
-    qreal m_widthRect = 0;
+    qreal m_widthRect  = 0;
     qreal m_durationMs = 0;
+    qint64 m_posMs     = 0;
 
 signals:
     void positionChanged(qint64 posMs);
@@ -25,6 +29,9 @@ public:
         pal.setColor(QPalette::Window, QColor(50, 50, 50));
         setAutoFillBackground(true);
         setPalette(pal);
+
+        connect(&EventBus::instance(), &EventBus::durationChanged, this, &CustomPlayhead::setDuration);
+        connect(&EventBus::instance(), &EventBus::positionChanged, this, &CustomPlayhead::onPositionChanged);
     };
 
     void setDuration(qint64 durationMs) 
@@ -38,6 +45,7 @@ public:
     void onPositionChanged(qint64 posMs)
     {
         if (m_durationMs <= 0) return;
+        if (posMs == m_posMs)  return;
 
         m_widthRect = ((qreal)posMs * width()) / m_durationMs;
         update();
@@ -59,10 +67,11 @@ protected:
     {
         qreal posInWidget = (qreal)event->pos().x() / width();
         // posInWidget = qBound(0.0, posInWidget, 1.0);
-        qint64 posMs = (qint64)(posInWidget * m_durationMs);
+        m_posMs = (qint64)(posInWidget * m_durationMs);
         
-        onPositionChanged(posMs);
-        emit positionChanged(posMs);
+        onPositionChanged(m_posMs);
+
+        emit EventBus::instance().seekRequested(m_posMs);
     };
     
 };

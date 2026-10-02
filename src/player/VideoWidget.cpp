@@ -1,4 +1,5 @@
 #include "VideoWidget.h"
+#include "../EventBus.h"
 
 #include <QImage>
 #include <QPainter>
@@ -13,6 +14,8 @@ extern "C" {
 VideoWidget::VideoWidget(QWidget *parent) : QWidget(parent)
 {
     setAttribute(Qt::WA_OpaquePaintEvent);
+
+    connect(&EventBus::instance(), &EventBus::frameChanged, this, &VideoWidget::setFrame);
 }
 
 void VideoWidget::setFrame(const AVFramePtr &vFrame)

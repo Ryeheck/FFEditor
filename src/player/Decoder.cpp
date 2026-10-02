@@ -1,5 +1,6 @@
 #include "Decoder.h"
 #include "FrameQueue.hpp"
+#include "../EventBus.h"
 
 #include <QString>
 #include <QDebug>
@@ -68,7 +69,7 @@ bool Decoder::loadSource(const QString &filename)
     if (m_formatContext->duration != AV_NOPTS_VALUE) {
         qint64 durationMs = (m_formatContext->duration * 1000) / AV_TIME_BASE;
 
-        emit durationChanged(durationMs);
+        emit EventBus::instance().durationChanged(durationMs);
     }
 
     // Open codecs
@@ -212,7 +213,7 @@ void Decoder::processVideo()
     
     clear();
 
-    emit finished();
+    emit EventBus::instance().decoderFinished();
 }
 
 void Decoder::demuxLoop()
@@ -337,7 +338,7 @@ void Decoder::decodeVideoLoop()
     }
     av_frame_free(&frame);
 
-    emit finished();
+    emit EventBus::instance().decoderFinished();
 }
 
 void Decoder::decodeAudioLoop() // Prototype

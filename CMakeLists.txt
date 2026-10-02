@@ -37,6 +37,7 @@ qt_add_executable(FFEditor
     WIN32 MACOSX_BUNDLE
     ${RESOURCES}
     src/main.cpp
+    src/EventBus.h
     src/ui/mainwindow.h
     src/ui/mainwindow.cpp
     src/ui/MediaLoader.h
@@ -52,8 +53,7 @@ qt_add_executable(FFEditor
     src/player/VideoWidget.h
     src/player/VideoWidget.cpp
     src/player/AudioOutput.cpp
-    src/player/AudioOutput.h
-
+    src/player/AudioOutput.h    
 )
 
 include(GNUInstallDirs)

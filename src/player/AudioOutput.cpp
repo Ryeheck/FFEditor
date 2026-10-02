@@ -5,6 +5,7 @@
 #define MINIAUDIO_IMPLEMENTATION
 
 #include "AudioOutput.h"
+#include "../EventBus.h"
 
 #include <atomic>
 
@@ -14,7 +15,7 @@ extern "C" {
 
 AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 {
-    
+    connect(&EventBus::instance(), &EventBus::volumeChanged, this, &AudioOutput::setVolume);
 }
 
 AudioOutput::~AudioOutput()

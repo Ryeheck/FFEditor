@@ -4,6 +4,7 @@
 #include "../painter/CustomPlayhead.hpp"
 #include "../player/MediaPlayer.h"
 #include "../player/VideoWidget.h"
+#include "../EventBus.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -23,11 +24,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     player = new MediaPlayer(this);
     
     videoWidget = new VideoWidget(this);
-    connect(player, &MediaPlayer::frameChanged, videoWidget, &VideoWidget::setFrame);
     MainLayout->addWidget(videoWidget);
 
     loader = new MediaLoader(this);
-    connect(loader, &MediaLoader::startPlayRequested, this, [this] (const QString &path) {
+    connect(&EventBus::instance(), &EventBus::startPlayRequested, this, [this] (const QString &path) {
         if (!player->loadVideo(path)) {
             qDebug() << "mainwn: Couldn't load video";
             return;
@@ -69,15 +69,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Volume songs
     volumeSlider = new CustomVolume(this);
-    connect(volumeSlider, &CustomVolume::valueChanged, player, &MediaPlayer::volumeChanged);
     volumeSlider->setValue(10);
     pnToolslLayout->addWidget(volumeSlider);
     
     // Playhead
     playhead = new CustomPlayhead(this);
-    connect(player, &MediaPlayer::positionChanged, playhead, &CustomPlayhead::onPositionChanged);
-    connect(playhead, &CustomPlayhead::positionChanged, player, &MediaPlayer::onPositionChanged);
-    connect(player, &MediaPlayer::durationChanged, playhead, &CustomPlayhead::setDuration);
     MainLayout->addWidget(playhead);
 
     MainLayout->addLayout(pnToolslLayout);

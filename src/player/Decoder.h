@@ -32,17 +32,13 @@ class Decoder : public QObject
 {
     Q_OBJECT
 
-signals:
-    void finished();
-    void durationChanged(qint64 durationMs);
-    void positionChanged(qint64 posMs);
-    
 public:
     explicit Decoder(QObject *parent = nullptr);
     ~Decoder() override;
 
     bool getNextVFrame(videoFrame &vFrame);
     bool getNextAFrame(audioFrame &aFrame);
+    
 public slots:
     void processVideo();
     void stop();

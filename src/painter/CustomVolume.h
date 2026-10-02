@@ -8,9 +8,6 @@ class CustomVolume : public QWidget
     Q_OBJECT
     float m_value = 0.0f;
 
-signals:
-    void valueChanged(float newValue);
-
 public:
     CustomVolume(QWidget *parent = nullptr);
     void setValue(int value);

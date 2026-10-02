@@ -1,4 +1,5 @@
 #include "CustomVolume.h"
+#include "../EventBus.h"
 
 #include <QWidget>
 #include <QPainter>
@@ -51,7 +52,7 @@ void CustomVolume::mouseMoveEvent(QMouseEvent *event)
     m_value = qBound(0.0, newValue, 1.0);
 
     update();
-    emit valueChanged(m_value);
+    emit EventBus::instance().volumeChanged(m_value);
 }
 
 void CustomVolume::setValue(int newValue)

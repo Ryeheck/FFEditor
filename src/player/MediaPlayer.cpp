@@ -1,6 +1,7 @@
 #include "MediaPlayer.h"
 #include "AudioOutput.h"
 #include "Decoder.h"
+#include "../EventBus.h"
 
 #include <qdebug.h>
 #include <qobject.h>
@@ -16,7 +17,8 @@ MediaPlayer::MediaPlayer(QObject *parent)
     m_renderTimer = new QTimer(this);
     connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextVFrame);
 
-    
+    connect(&EventBus::instance(), &EventBus::seekRequested, this, &MediaPlayer::seekTo);
+    connect(&EventBus::instance(), &EventBus::decoderFinished, this, &MediaPlayer::cleanupDecoder);
 }
 
 void MediaPlayer::processNextVFrame()
@@ -34,9 +36,9 @@ void MediaPlayer::processNextVFrame()
             m_audio->seekTo(vFrame.posMs); // Prototype
         }
 
-        emit frameChanged(vFrame.frame);
+        emit EventBus::instance().frameChanged(vFrame.frame);
 
-        positionChanged(vFrame.posMs);
+        emit EventBus::instance().positionChanged(vFrame.posMs);
     }
 }
 
@@ -62,9 +64,6 @@ bool MediaPlayer::initDecoder()
 {
     m_decoder = new Decoder();
     
-    connect(m_decoder, &Decoder::durationChanged, this, &MediaPlayer::durationChanged);
-    connect(m_decoder, &Decoder::finished, this, &MediaPlayer::cleanupDecoder);
-
     return true;
 }
 
@@ -80,8 +79,6 @@ bool MediaPlayer::initAudio()
         qDebug() << "Core: Coulnd't init audio";
         return false;
     }
-
-    connect(this, &MediaPlayer::volumeChanged, m_audio, &AudioOutput::setVolume);
 
     return true;
 }
@@ -142,13 +139,12 @@ void MediaPlayer::stop()
     cleanupDecoder();
 }
 
-void MediaPlayer::onPositionChanged(qint64 pos)
+void MediaPlayer::seekTo(qint64 posMs)
 {
     if (m_decoder)
-        m_decoder->seek(pos);
+        m_decoder->seek(posMs);
     if (m_audio)
-        m_audio->seekTo(pos);
-
+        m_audio->seekTo(posMs);
 
 }
 

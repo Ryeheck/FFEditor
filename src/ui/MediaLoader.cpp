@@ -1,4 +1,5 @@
 #include "MediaLoader.h"
+#include "../EventBus.h"
 
 #include <QDialog>
 #include <QFileDialog>
@@ -60,7 +61,7 @@ MediaLoader::MediaLoader(QWidget *parent)
     connect(m_playButton, &QPushButton::clicked, this, [this] () {  
         QListWidgetItem *item = m_listWidget->item(0);
 
-        if(item)  emit startPlayRequested(item->text());  
+        if(item)  emit EventBus::instance().startPlayRequested(item->text());  
     });
 
     resize(560, 400);

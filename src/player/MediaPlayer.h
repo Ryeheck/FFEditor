@@ -25,11 +25,6 @@ class MediaPlayer : public QObject
 {
     Q_OBJECT
 
-signals:
-    void positionChanged(qint64 pos);
-    void durationChanged(qint64 duration);
-    void frameChanged(const AVFramePtr &vFrame);
-    void volumeChanged(const float &value);
 public:
     explicit MediaPlayer(QObject *parent = nullptr);
     ~MediaPlayer() override;
@@ -41,7 +36,7 @@ public:
     void stop();
 
 public slots:
-    void onPositionChanged(qint64 pos);
+    void seekTo(qint64 posMs);
 
 private slots:
 
