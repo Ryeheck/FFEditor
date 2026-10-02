@@ -11,6 +11,10 @@ extern "C" {
 #include "miniaudio.h"
 }
 
+enum class AudioFormat {
+    Stereo,
+    Mono
+};
 
 class AudioOutput : public QObject
 {
@@ -26,7 +30,7 @@ public:
     
 public slots:
     void start();
-    bool init(Decoder *decoder, uint64_t samplesRate);
+    bool init(Decoder *decoder, uint64_t samplesRate, AudioFormat format = AudioFormat::Stereo);
     void seekTo(qint64 posMs);
     qint64 getAudioClockMs();
     void stop();
@@ -43,6 +47,7 @@ private:
     size_t m_aFrameOffset;
     uint64_t m_sampleRate;
     std::atomic<uint64_t> m_playedAudioSamples{0};
+    std::atomic<int> m_audioFormat{2};
 };
 
 #endif // AUDIOOUTPUT_H

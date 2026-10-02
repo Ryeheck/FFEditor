@@ -20,18 +20,19 @@ AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 AudioOutput::~AudioOutput()
 {
     stop();
-    qDebug() << "AudioOutput: ok";
+    qDebug() << "AudioOutput destroy";
 }
 
-bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate)
+bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate, AudioFormat format)
 {
     m_decoder = decoder;
     m_sampleRate = sampleRate;
+    m_audioFormat = format == AudioFormat::Stereo ? 2 : 1;
 
     ma_device_config config = ma_device_config_init(ma_device_type_playback);
     config.playback.format   = ma_format_f32; // Works with float32 ([-1 : 1])
-    config.playback.channels = 2;             // Stereo
-    config.sampleRate        = m_sampleRate;         // Ghz
+    config.playback.channels = m_audioFormat; // Format audio
+    config.sampleRate        = m_sampleRate;  // Ghz
     config.dataCallback      = audioCallback; // Function
     config.pUserData         = this;          // Ptr on this player
 
@@ -58,8 +59,7 @@ void AudioOutput::audioCallback(ma_device *pDevice, void *pOutput, const void *p
 
 void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
 {
-    // STEREO
-    size_t samplesNeeded = frameCount * 2;
+    size_t samplesNeeded = frameCount * m_audioFormat;
     size_t samplesFilled = 0;
 
     while (samplesFilled < samplesNeeded) 
