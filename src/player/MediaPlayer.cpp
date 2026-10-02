@@ -29,7 +29,9 @@ void MediaPlayer::processNextVFrame()
 
     if (m_decoder->getNextVFrame(vFrame)) {
         if (!vFrame.frame)          return;
-        if (vFrame.posMs > aPosMs) {
+
+        qint64 posRange = vFrame.posMs - aPosMs;
+        if (posRange < -35 || posRange > 35) {
             m_audio->seekTo(vFrame.posMs); // Prototype
         }
 
@@ -88,8 +90,8 @@ bool MediaPlayer::initAudio()
 bool MediaPlayer::loadVideo(const QString &path) 
 {  
     cleanupDecoder();
-    initDecoder();
-    initAudio();
+    if (!initDecoder())  return false;
+    if (!initAudio())    return false;
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
@@ -100,8 +102,6 @@ bool MediaPlayer::loadVideo(const QString &path)
     m_demuxThread       = std::thread(&Decoder::demuxLoop, m_decoder);
     m_videoDecodeThread = std::thread(&Decoder::decodeVideoLoop, m_decoder);
     m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);
-
-    
     return true;
 }
 
