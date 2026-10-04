@@ -4,6 +4,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QWaitCondition>
+#include <qmutex.h>
 #include <queue>
 #include <QDebug>
 
@@ -40,6 +41,16 @@ public:
         m_queue.push(value);
         m_condNotEmpty.wakeOne();
 
+        return true;
+    }
+
+    bool peek(T &value)
+    {
+        QMutexLocker locker(&m_mutex);
+
+        if (m_queue.empty() || m_abort)  return false;
+
+        value = m_queue.front();
         return true;
     }
 
