@@ -15,31 +15,63 @@ MediaPlayer::MediaPlayer(QObject *parent)
     : QObject(parent)
 {
     m_renderTimer = new QTimer(this);
-    connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextVFrame);
+    connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
 
     connect(&EventBus::instance(), &EventBus::seekRequested, this, &MediaPlayer::seekTo);
     connect(&EventBus::instance(), &EventBus::decoderFinished, this, &MediaPlayer::cleanupDecoder);
 }
 
-void MediaPlayer::processNextVFrame()
+void MediaPlayer::processNextFrame()
 {
-    videoFrame vFrame;
+    if (!m_decoder)  return;
     
-    if (m_decoder->getNextVFrame(vFrame)) {
-        if (!vFrame.frame)  return;
-
-        qint64 aPosMs = vFrame.posMs;
-        if (m_audio)  aPosMs = m_audio->getAudioClockMs();
-        
-        qint64 posRange = vFrame.posMs - aPosMs;
-        if (posRange < -35 || posRange > 35) {
-            m_audio->seekTo(vFrame.posMs); // Prototype
-        }
-
-        emit EventBus::instance().frameChanged(vFrame.frame);
-
-        emit EventBus::instance().positionChanged(vFrame.posMs);
+    videoFrame vFrame;
+    if (!m_decoder->peekNextVFrame(vFrame)) {
+        // Queue empty, wait 5 ms 
+        m_renderTimer->start(5);
+        return;
     }
+
+    // EOF
+    if (!vFrame.frame) {
+        stop();
+        return;
+    }
+
+    qint64 aPosMs = m_audio ? m_audio->getAudioClockMs() : vFrame.posMs;
+    int diffMs = vFrame.posMs - aPosMs;
+    
+    /* Range [-100 ; 20] ms */
+    // Videoframe is 100 ms behind
+    if (diffMs < -100) {
+        m_decoder->getNextVFrame(vFrame);
+        m_renderTimer->start(0);
+        return;
+    }
+
+    // Videoframe is 20 ms ahead
+    if (diffMs > 20) {
+        int delay = std::min(diffMs, 200);
+        
+        m_renderTimer->start(delay);
+        return;
+    }
+
+    // Everything is ok
+    m_decoder->getNextVFrame(vFrame);
+    emit EventBus::instance().frameChanged(vFrame.frame);
+    emit EventBus::instance().positionChanged(aPosMs);
+    
+    // Next frame
+    int nextDelay = 16; // Is default (60 FPS)
+    videoFrame nextVFrame;
+
+    if (m_decoder->peekNextVFrame(nextVFrame) && nextVFrame.frame) {
+        nextDelay = nextVFrame.posMs - vFrame.posMs;
+    }
+
+    int delay = std::max(1, nextDelay + diffMs);
+    m_renderTimer->start(delay);
 }
 
 void MediaPlayer::cleanupDecoder()

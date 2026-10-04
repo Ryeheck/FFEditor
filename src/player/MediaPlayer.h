@@ -45,7 +45,7 @@ private:
     bool initAudio();
     bool initDecoder();
     void cleanupDecoder();
-    void processNextVFrame();
+    void processNextFrame();
 
     std::thread m_demuxThread;
     std::thread m_videoDecodeThread;
