@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QImage>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -38,21 +39,20 @@ public:
 
     bool getNextVFrame(videoFrame &vFrame);
     bool getNextAFrame(audioFrame &aFrame);
-    
+    bool peekNextVFrame(videoFrame &vFrame);
+
 public slots:
-    void processVideo();
     void stop();
     void clear();
     bool loadSource(const QString &filename);
-    void seek(double posMs); 
+    void seek(int64_t posMs); 
     void decodeVideoLoop();
     void demuxLoop();
     void decodeAudioLoop();
 
 private:
     bool initAudio();
-    void flushBuffers();
-    void seekTo(double posMs);
+    void seekTo(int64_t posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame) const;
 
@@ -69,9 +69,10 @@ private:
 
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_seekReq{false};
-    std::atomic<double> m_seekTargetMs{0};
+    std::atomic<int64_t> m_seekTargetMs{0};
     std::atomic<bool> m_isSeeking{false};
-    std::atomic<bool> m_flushbuffers{false};
+    std::atomic<bool> m_flushVideobuffer{false};
+    std::atomic<bool> m_flushAudiobuffer{false};
 
     int m_videoStreamIndex = -1;
     int m_audioStreamIndex = -1;

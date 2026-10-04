@@ -154,68 +154,6 @@ bool Decoder::initAudio()
     return true;
 }
 
-void Decoder::processVideo()
-{
-    m_running.store(true);
-
-    AVFrame *frame = av_frame_alloc();
-    AVPacket *packet = av_packet_alloc();
-
-    while (m_running.load()) 
-    {
-        if (m_seekReq.exchange(false)) {
-            seekTo(m_seekTargetMs.load());
-            continue;
-        }
-
-        int ret = av_read_frame(m_formatContext, packet);
-        if (ret < 0) break;
-
-        if (packet->stream_index != m_videoStreamIndex) {
-            av_packet_unref(packet);
-            continue;
-        }
-        if (avcodec_send_packet(m_codecContextVideo, packet) != 0) {
-            av_packet_unref(packet);
-            continue;
-        }
-                
-        while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
-        {  
-            qint64 posMs = getFramePosMs(frame);
-            if (m_isSeeking.load()) {
-                if (posMs < m_seekTargetMs.load()) {
-                    av_frame_unref(frame);
-                    continue;
-                } else {
-                    m_isSeeking.store(false);
-                }
-            }
-            videoFrame vFrame;
-            vFrame.posMs = posMs;
-            vFrame.frame = cloneToSharedPtr(frame);
-
-            // Push frame to queue
-            if (!m_frameVQueue.push(vFrame)) {
-                // If queue is full
-                av_frame_unref(frame);
-                break;
-            }
-            av_frame_unref(frame);
-        }
-        av_packet_unref(packet);
-        
-    }
-
-    // Free and abort queue
-    av_frame_free(&frame);
-    av_packet_free(&packet);
-    
-    clear();
-
-    emit EventBus::instance().decoderFinished();
-}
-
 void Decoder::demuxLoop()
 {
     m_running.store(true);
@@ -265,8 +203,9 @@ void Decoder::decodeVideoLoop()
 
     while (m_running.load()) 
     {
-        if (m_flushbuffers.load()) {
-            flushBuffers();
+        if (m_flushVideobuffer.exchange(false)) {
+            avcodec_flush_buffers(m_codecContextVideo);
+            m_frameVQueue.clear();
             continue;
         }
 
@@ -349,8 +288,9 @@ void Decoder::decodeAudioLoop() // Prototype
 
     while (m_running.load()) 
     {
-        if (m_flushbuffers.load()) {
-            flushBuffers();
+        if (m_flushAudiobuffer.exchange(false)) {
+            avcodec_flush_buffers(m_codecContextAudio);
+            m_frameAQueue.clear();
             continue;
         }
 
@@ -377,15 +317,18 @@ void Decoder::decodeAudioLoop() // Prototype
             aFrame.posMs = posMs;
 
             //  maxOutSamples = (delay + in_rate) * 48000 / in_rate
-            int maxOutSamples = av_rescale_rnd(swr_get_delay(m_swrContext, m_codecContextAudio->sample_rate) + frame->nb_samples, 
-                                               48000, m_codecContextAudio->sample_rate, AV_ROUND_UP);
+            int maxOutSamples = av_rescale_rnd(
+                                    swr_get_delay(m_swrContext, m_codecContextAudio->sample_rate) 
+                                        + frame->nb_samples, 
+                                    48000, m_codecContextAudio->sample_rate, AV_ROUND_UP
+            );
 
             // Alloc for STEREO
             aFrame.samples.resize(maxOutSamples * 2);
             uint8_t *outData = reinterpret_cast<uint8_t *>(aFrame.samples.data());
 
             int samples = swr_convert(m_swrContext, &outData, maxOutSamples, 
-                                  (const uint8_t **)frame->data, frame->nb_samples);
+                                      (const uint8_t **)frame->data, frame->nb_samples);
                 
             // Actuall samples for STEREO
             aFrame.samples.resize(samples * 2);
@@ -429,22 +372,26 @@ void Decoder::clear()
     if (m_swrContext)         swr_free(&m_swrContext);
 }
 
-void Decoder::seek(double posMs)
+void Decoder::seek(int64_t posMs)
 {
     m_seekReq.store(true);
     m_seekTargetMs.store(posMs);
 }
 
-void Decoder::seekTo(double posMs)
+void Decoder::seekTo(int64_t posMs)
 {
-    if (!m_formatContext     || 
-        !m_codecContextVideo || m_videoStreamIndex < 0 ||
-        !m_codecContextAudio || m_audioStreamIndex < 0) {
+    if (!m_formatContext || m_videoStreamIndex < 0) {
         qDebug() << "seekTo: Not a video";
         return;
     }
-
-    // Correct stream
+    if (posMs > 0) {
+        qDebug() << "Decoder: can't seek to: " << posMs;
+        return;
+    }
+    
+    m_isSeeking.store(true);
+    
+    // Stream
     AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
 
     // From MS to TS
@@ -465,28 +412,12 @@ void Decoder::seekTo(double posMs)
         return;
     }
 
-    // clear queue
+    // Clear queue
     m_pktVQueue.clear();
     m_pktAQueue.clear();
-
-    // Flags
-    m_isSeeking.store(true);
-    m_flushbuffers.store(true);
-}
-
-void Decoder::flushBuffers()
-{
-    if (!m_codecContextVideo || !m_flushbuffers.load() || !m_codecContextAudio)
-        return;
     
-    avcodec_flush_buffers(m_codecContextVideo);
-    avcodec_flush_buffers(m_codecContextAudio);
-    
-    // Clear buffers
-    m_frameAQueue.clear();
-    m_frameVQueue.clear();
-
-    m_flushbuffers.store(false);
+    m_flushVideobuffer.store(true);
+    m_flushAudiobuffer.store(true);
 }
 
 int64_t Decoder::getFramePosMs(const AVFrame *frame) const
@@ -523,6 +454,11 @@ AVFramePtr Decoder::cloneToSharedPtr(AVFrame *frame)
 bool Decoder::getNextVFrame(videoFrame &vFrame)
 {
     return m_frameVQueue.pop(vFrame);
+}
+
+bool Decoder::peekNextVFrame(videoFrame &vFrame)
+{
+    return m_frameVQueue.peek(vFrame);
 }
 
 bool Decoder::getNextAFrame(audioFrame &aFrame)
