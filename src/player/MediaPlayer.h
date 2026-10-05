@@ -56,6 +56,7 @@ private:
     QTimer *m_renderTimer   = nullptr;
     playbackState m_state   = playbackState::Stopped;
     
+    int m_renderMs = 16;
 };
 
 #endif // MEDIAPLAYER_H

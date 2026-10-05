@@ -63,7 +63,7 @@ void MediaPlayer::processNextFrame()
     emit EventBus::instance().positionChanged(aPosMs);
     
     // Next frame
-    int nextDelay = 16; // Is default (60 FPS)
+    int nextDelay = m_renderMs; // Is default 
     videoFrame nextVFrame;
 
     if (m_decoder->peekNextVFrame(nextVFrame) && nextVFrame.frame) {
@@ -153,7 +153,7 @@ void MediaPlayer::play()
     if (m_renderTimer) {
         qDebug() << "Core: Timer start..";
         qDebug() << "Core: Decoder start..";
-        m_renderTimer->start(16);
+        m_renderTimer->start(m_renderMs);
     } else {
         qDebug() << "Core: Timer not init";
         // int ret = initTimer();
