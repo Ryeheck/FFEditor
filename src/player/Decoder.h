@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 extern "C" {
@@ -67,12 +68,13 @@ private:
     FrameQueue<videoFrame> m_frameVQueue;
     FrameQueue<audioFrame> m_frameAQueue;
 
+    std::mutex videoMtx;
+    std::mutex audioMtx;
+
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_seekReq{false};
     std::atomic<int64_t> m_seekTargetMs{0};
     std::atomic<bool> m_isSeeking{false};
-    std::atomic<bool> m_flushVideobuffer{false};
-    std::atomic<bool> m_flushAudiobuffer{false};
 
     int m_videoStreamIndex = -1;
     int m_audioStreamIndex = -1;
