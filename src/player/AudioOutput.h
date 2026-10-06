@@ -3,6 +3,7 @@
 
 #include "Decoder.h"
 
+#include <cstdint>
 #include <qtypes.h>
 #include <QObject>
 #include <atomic>
@@ -32,6 +33,8 @@ public slots:
     qint64 getAudioClockMs();
     void stop();
     void setVolume(const float &volume);
+    void setDuration(const uint64_t &duration);
+
 private:
     static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
     void readSamples(float *pOutput, ma_uint32 frameCount);
@@ -41,8 +44,9 @@ private:
     bool m_init = false;
     Decoder *m_decoder = nullptr;
     audioFrame m_aFrame;
-    size_t m_aFrameOffset;
-    uint64_t m_sampleRate;
+    size_t m_aFrameOffset = 0;
+    uint64_t m_sampleRate = 0;
+    uint64_t m_duration   = 0;
     std::atomic<uint64_t> m_playedAudioSamples{0};
     std::atomic<int> m_audioFormat{2};
 };

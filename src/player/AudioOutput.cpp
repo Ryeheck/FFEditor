@@ -16,6 +16,7 @@ extern "C" {
 AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 {
     connect(&EventBus::instance(), &EventBus::volumeChanged, this, &AudioOutput::setVolume);
+    connect(&EventBus::instance(), &EventBus::durationChanged, this, &AudioOutput::setDuration);
 }
 
 AudioOutput::~AudioOutput()
@@ -103,6 +104,11 @@ void AudioOutput::setVolume(const float &volume)
         ma_device_set_master_volume(&m_audioDevice, volume);
 }
 
+void AudioOutput::setDuration(const uint64_t &duration)
+{
+    m_duration = duration;
+}
+
 void AudioOutput::stop()
 {
     if (m_init) {
@@ -114,8 +120,10 @@ void AudioOutput::stop()
 void AudioOutput::seekTo(qint64 posMs)
 {
     uint64_t targetSamples;
-    if (!posMs || !m_sampleRate)  
+    if (posMs < 0  || !m_sampleRate)  
         targetSamples = 0;
+    else if (posMs > m_duration)
+        targetSamples = m_duration;
     else                          
         targetSamples = (static_cast<uint64_t>(posMs) * m_sampleRate) / 1000;
     
