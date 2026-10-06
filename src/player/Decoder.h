@@ -47,12 +47,12 @@ public slots:
     void stop();
     void clear();
     bool loadSource(const QString &filename);
-    void seek(int64_t posMs); 
+    void seek(qint64 posMs); 
     void decodeVideoLoop();
     void demuxLoop();
     void decodeAudioLoop();
     qint64 getDuration();
-    
+
 private:
     bool initAudio();
     void seekTo(int64_t posMs);

@@ -380,10 +380,10 @@ void Decoder::clear()
     if (m_swrContext)         swr_free(&m_swrContext);
 }
 
-void Decoder::seek(int64_t posMs)
+void Decoder::seek(qint64 posMs)
 {
     m_seekReq.store(true);
-    m_seekTargetMs.store(posMs);
+    m_seekTargetMs.store(static_cast<int64_t>(posMs));
 }
 
 void Decoder::seekTo(int64_t posMs)
@@ -412,8 +412,8 @@ void Decoder::seekTo(int64_t posMs)
     // Seek
     int ret = avformat_seek_file(
         m_formatContext, m_videoStreamIndex,
-        INT64_MIN, targetTs, INT64_MAX,
-        AVSEEK_FLAG_BACKWARD       // 
+        INT64_MIN, targetTs, INT64_MAX,    // Range [INT64_MIN : targetTs : INT64_MAX]
+        AVSEEK_FLAG_BACKWARD                           // first I-frame
     );
     if (ret < 0) {
         qDebug() << "Seek error: " << ret;
@@ -473,7 +473,7 @@ qint64 Decoder::getDuration()
         qDebug() << "Decoder: can't send duration, formatContext is not init";
         return 0;
     }
-    if (m_formatContext->duration != AV_NOPTS_VALUE) {
+    if (m_formatContext->duration == AV_NOPTS_VALUE) {
         qDebug() << "Decoder: can't send duration, formatContext is not duration";
         return 0;
     }
