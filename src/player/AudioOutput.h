@@ -32,8 +32,8 @@ public slots:
     void seekTo(qint64 posMs);
     qint64 getAudioClockMs();
     void stop();
-    void setVolume(const float &volume);
-    void setDuration(const uint64_t &duration);
+    void setVolume(const float volume);
+    void setDuration(const uint64_t duration);
 
 private:
     static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);

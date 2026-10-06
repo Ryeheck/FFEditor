@@ -98,13 +98,13 @@ void AudioOutput::start()
     }
 }
 
-void AudioOutput::setVolume(const float &volume)
+void AudioOutput::setVolume(const float volume)
 {
     if (m_init)
         ma_device_set_master_volume(&m_audioDevice, volume);
 }
 
-void AudioOutput::setDuration(const uint64_t &duration)
+void AudioOutput::setDuration(const uint64_t duration)
 {
     m_duration = duration;
 }
@@ -117,13 +117,13 @@ void AudioOutput::stop()
     }
 }
 
-void AudioOutput::seekTo(qint64 posMs)
+void AudioOutput::seekTo(const qint64 posMs)
 {
     uint64_t targetSamples;
     if (posMs < 0  || !m_sampleRate)  
         targetSamples = 0;
     else if (posMs > m_duration)
-        targetSamples = m_duration;
+        targetSamples = (m_duration * m_sampleRate) / 1000;
     else                          
         targetSamples = (static_cast<uint64_t>(posMs) * m_sampleRate) / 1000;
     
@@ -134,6 +134,6 @@ void AudioOutput::seekTo(qint64 posMs)
 
 qint64 AudioOutput::getAudioClockMs()
 {
-    if (m_playedAudioSamples.load() == 0)  return 0;
+    if (m_playedAudioSamples.load() < 0)  return 0;
     return static_cast<qint64>((m_playedAudioSamples.load() * 1000) / m_sampleRate);
 }
