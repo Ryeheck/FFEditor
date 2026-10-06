@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <qtypes.h>
 #include <vector>
 
 extern "C" {
@@ -50,7 +51,8 @@ public slots:
     void decodeVideoLoop();
     void demuxLoop();
     void decodeAudioLoop();
-
+    qint64 getDuration();
+    
 private:
     bool initAudio();
     void seekTo(int64_t posMs);

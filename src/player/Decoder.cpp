@@ -8,6 +8,8 @@
 #include <chrono>
 #include <cstdint>
 #include <mutex>
+#include <qdebug.h>
+#include <qtypes.h>
 #include <thread>
 
 extern "C" {
@@ -69,11 +71,8 @@ bool Decoder::loadSource(const QString &filename)
     }
 
     // Send duration in UI
-    if (m_formatContext->duration != AV_NOPTS_VALUE) {
-        qint64 durationMs = (m_formatContext->duration * 1000) / AV_TIME_BASE;
-
-        emit EventBus::instance().durationChanged(durationMs);
-    }
+    qint64 durationMs = getDuration();
+    emit EventBus::instance().durationChanged(durationMs);
 
     // Open codecs
     AVCodecParameters *codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
@@ -393,10 +392,10 @@ void Decoder::seekTo(int64_t posMs)
         qDebug() << "seekTo: Not a video";
         return;
     }
-    if (posMs < 0) {
-        qDebug() << "Decoder: can't seek to: " << posMs;
-        return;
-    }
+
+    qint64 durationMs = getDuration();
+    if (posMs > durationMs)  posMs = durationMs;
+    if (posMs < 0)           posMs = 0;
     
     m_isSeeking.store(true);
     
@@ -466,6 +465,19 @@ AVFramePtr Decoder::cloneToSharedPtr(AVFrame *frame)
     AVFrame *dstFrame = av_frame_clone(frame);
 
     return AVFramePtr(dstFrame, [](AVFrame *frame) {  av_frame_free(&frame);  });
+}
+
+qint64 Decoder::getDuration()
+{
+    if (!m_formatContext) {
+        qDebug() << "Decoder: can't send duration, formatContext is not init";
+        return 0;
+    }
+    if (m_formatContext->duration != AV_NOPTS_VALUE) {
+        qDebug() << "Decoder: can't send duration, formatContext is not duration";
+        return 0;
+    }
+    return (m_formatContext->duration * 1000) / AV_TIME_BASE;
 }
 
 bool Decoder::getNextVFrame(videoFrame &vFrame)
