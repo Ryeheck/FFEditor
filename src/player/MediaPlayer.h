@@ -36,7 +36,7 @@ public:
     void stop();
 
 public slots:
-    void seekTo(qint64 posMs);
+    
 
 private slots:
 

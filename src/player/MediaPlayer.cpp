@@ -17,7 +17,6 @@ MediaPlayer::MediaPlayer(QObject *parent)
     m_renderTimer = new QTimer(this);
     connect(m_renderTimer, &QTimer::timeout, this, &MediaPlayer::processNextFrame);
 
-    connect(&EventBus::instance(), &EventBus::seekRequested, this, &MediaPlayer::seekTo);
     connect(&EventBus::instance(), &EventBus::decoderFinished, this, &MediaPlayer::cleanupDecoder);
 }
 
@@ -43,7 +42,7 @@ void MediaPlayer::processNextFrame()
     
     /* Range [-100 ; 20] ms */
     // Videoframe is 100 ms behind
-    if (diffMs < -100) {
+    if (diffMs < -50) {
         m_decoder->getNextVFrame(vFrame);
         m_renderTimer->start(0);
         return;
@@ -157,6 +156,7 @@ void MediaPlayer::play()
     } else {
         qDebug() << "Core: Timer not init";
         // int ret = initTimer();
+        return;
     }
 }
 
@@ -169,15 +169,6 @@ void MediaPlayer::stop()
         m_renderTimer->stop();
 
     cleanupDecoder();
-}
-
-void MediaPlayer::seekTo(qint64 posMs)
-{
-    if (m_decoder)
-        m_decoder->seek(posMs);
-    if (m_audio)
-        m_audio->seekTo(posMs);
-
 }
 
 void MediaPlayer::pause() 
