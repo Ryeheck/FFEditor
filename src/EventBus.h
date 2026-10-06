@@ -26,6 +26,7 @@ public:
 signals:
     void seekRequested(qint64 posMs);
     void positionChanged(qint64 posMs);
+    void positionAudioChanged(qint64 posMs);
     void durationChanged(qint64 durationMs);
     void decoderFinished();
     void volumeChanged(const float &value);
