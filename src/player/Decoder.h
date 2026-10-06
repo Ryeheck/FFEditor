@@ -57,7 +57,7 @@ private:
     bool initAudio();
     void seekTo(int64_t posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
-    int64_t getFramePosMs(const AVFrame *frame) const;
+    int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;
 
     AVCodecContext *m_codecContextAudio = nullptr;
     AVCodecContext *m_codecContextVideo = nullptr;
@@ -77,6 +77,7 @@ private:
     std::atomic<bool> m_seekReq{false};
     std::atomic<int64_t> m_seekTargetMs{0};
     std::atomic<bool> m_isSeeking{false};
+    std::atomic<bool> m_Iframe{false};
 
     int m_videoStreamIndex = -1;
     int m_audioStreamIndex = -1;

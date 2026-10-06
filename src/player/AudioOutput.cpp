@@ -17,6 +17,7 @@ AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 {
     connect(&EventBus::instance(), &EventBus::volumeChanged, this, &AudioOutput::setVolume);
     connect(&EventBus::instance(), &EventBus::durationChanged, this, &AudioOutput::setDuration);
+    connect(&EventBus::instance(), &EventBus::positionAudioChanged, this, &AudioOutput::seekTo);
 }
 
 AudioOutput::~AudioOutput()

@@ -27,7 +27,7 @@ Decoder::Decoder(QObject *parent) : QObject(parent),
                                     m_frameVQueue(15),
                                     m_frameAQueue(300)
 {
-    
+    connect(&EventBus::instance(), &EventBus::seekRequested, this, &Decoder::seek);
 }
 
 bool Decoder::loadSource(const QString &filename)
@@ -226,7 +226,7 @@ void Decoder::decodeVideoLoop()
             // Last B-frame
             while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
             {  
-                qint64 posMs = getFramePosMs(frame);
+                qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
                 if (m_isSeeking.load()) {
                     if (posMs < m_seekTargetMs.load()) {
                         av_frame_unref(frame);
@@ -262,7 +262,7 @@ void Decoder::decodeVideoLoop()
 
             while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
             {  
-                qint64 posMs = getFramePosMs(frame);
+                qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
                 if (m_isSeeking.load()) {
                     if (posMs < m_seekTargetMs.load()) {
                         av_frame_unref(frame);
@@ -318,7 +318,9 @@ void Decoder::decodeAudioLoop() // Prototype
 
             while (m_running.load() && avcodec_receive_frame(m_codecContextAudio, frame) == 0) // FRAME LOAD
             {  
-                qint64 posMs = getFramePosMs(frame);
+                qint64 posMs = getFramePosMs(frame, m_audioStreamIndex);
+                if (m_Iframe.exchange(false)) 
+                    emit EventBus::instance().positionAudioChanged(posMs);
 
                 audioFrame aFrame;
                 aFrame.posMs = posMs;
@@ -432,13 +434,18 @@ void Decoder::seekTo(int64_t posMs)
     }
     {
         std::lock_guard<std::mutex> lock(audioMtx);
-        if (m_codecContextAudio)  avcodec_flush_buffers(m_codecContextAudio);
+        if (m_codecContextAudio) {
+            avcodec_flush_buffers(m_codecContextAudio);
+            
+            // Rewind audio to first I-frame
+            m_Iframe.store(true);
+        }
     }
 }
 
-int64_t Decoder::getFramePosMs(const AVFrame *frame) const
+int64_t Decoder::getFramePosMs(const AVFrame *frame, int streamIndex) const
 {
-    if (!frame || !m_formatContext || !m_codecContextAudio) {
+    if (!frame || !m_formatContext) {
         qDebug() << "getFramePosMs: not a frame";
         return -1;
     }
@@ -450,10 +457,9 @@ int64_t Decoder::getFramePosMs(const AVFrame *frame) const
         return -1;
     }
 
-    AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
-
+    AVStream *stream = m_formatContext->streams[streamIndex];
     // If there is a start time
-    if (stream->start_time == AV_NOPTS_VALUE)
+    if (stream->start_time != AV_NOPTS_VALUE)
         pts -= stream->start_time;
     
     // From TS to MS
