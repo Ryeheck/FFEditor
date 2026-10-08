@@ -14,6 +14,11 @@
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QToolButton>
+#include <qboxlayout.h>
+#include <qlabel.h>
+#include <qobject.h>
+#include <qtypes.h>
+#include <qwidget.h>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -21,10 +26,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     MainLayout = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
 
+    MainLayout->setContentsMargins(0, 0, 0, 0);
+    MainLayout->addSpacing(0);
+
     player = new MediaPlayer(this);
     
     videoWidget = new VideoWidget(this);
-    MainLayout->addWidget(videoWidget);
+
+    MainLayout->addWidget(videoWidget, 1);
 
     loader = new MediaLoader(this);
     connect(&EventBus::instance(), &EventBus::startPlayRequested, this, [this] (const QString &path) {
@@ -74,9 +83,35 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Playhead
     playhead = new CustomPlayhead(this);
-    MainLayout->addWidget(playhead);
+    
+    // Time (playhead)
+    // Duration video
+    QLabel *durLabel = new QLabel("00:00", this);
+    connect(&EventBus::instance(), &EventBus::durationChanged, this, [this, durLabel] (qint64 dur) {
+        durLabel->setText(QString("%1").arg(playhead->formatTime(dur)));
+    });
+    
+    // Pos now
+    QLabel *timeLabel = new QLabel("00:00", this);
+    connect(&EventBus::instance(), &EventBus::positionChanged, this, [this, timeLabel] (qint64 ms) {
+        timeLabel->setText(QString("%1").arg(playhead->formatTime(ms)));
+    });
+    
+    // Hlayout (playhead)
+    QHBoxLayout *hLayoutPlayhead = new QHBoxLayout(this);
+    hLayoutPlayhead->addWidget(timeLabel);
+    hLayoutPlayhead->addWidget(playhead);
+    hLayoutPlayhead->addWidget(durLabel);
 
-    MainLayout->addLayout(pnToolslLayout);
+    // Bottom panel
+    QVBoxLayout *bottomPanel = new QVBoxLayout(this);
+    bottomPanel->setContentsMargins(10, 15, 10, 15);
+    bottomPanel->setSpacing(5);
+    
+    bottomPanel->addLayout(hLayoutPlayhead);
+    bottomPanel->addLayout(pnToolslLayout);
+    
+    MainLayout->addLayout(bottomPanel);
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
