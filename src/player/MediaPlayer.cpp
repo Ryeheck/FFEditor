@@ -167,7 +167,9 @@ void MediaPlayer::stop()
 
     if (m_renderTimer)  
         m_renderTimer->stop();
-
+    if (m_audio)
+        m_audio->stop();
+    
     cleanupDecoder();
 }
 
