@@ -18,7 +18,7 @@ public:
 
 private slots:
     void onAddButtonClicked();
-
+    void playMedia(QListWidgetItem *item);
 private:
     QListWidget *m_listWidget;
     QTabWidget  *m_tabWidget;

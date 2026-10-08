@@ -9,6 +9,11 @@
 #include <QListWidget>
 #include <QTabWidget>
 #include <QWidget>
+#include <qfileinfo.h>
+#include <qlistwidget.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qpushbutton.h>
 
 MediaLoader::MediaLoader(QWidget *parent)
     : QDialog(parent)
@@ -58,10 +63,15 @@ MediaLoader::MediaLoader(QWidget *parent)
 
     connect(m_closeButton, &QPushButton::clicked, this, &MediaLoader::hide);
     connect(m_addButton, &QPushButton::clicked, this, &MediaLoader::onAddButtonClicked);
-    connect(m_playButton, &QPushButton::clicked, this, [this] () {  
-        QListWidgetItem *item = m_listWidget->item(0);
-
-        if(item)  emit EventBus::instance().startPlayRequested(item->text());  
+    connect(m_removeButton, &QPushButton::clicked, this, [this]() {
+        QListWidgetItem *item = m_listWidget->currentItem();
+        if (item)  delete item;
+        
+    });
+    connect(m_playButton, &QPushButton::clicked, this, [this]() {
+        QListWidgetItem *item = m_listWidget->currentItem();
+        
+        playMedia(item);
     });
 
     resize(560, 400);
@@ -75,7 +85,18 @@ void MediaLoader::onAddButtonClicked()
         QStandardPaths::writableLocation(QStandardPaths::MoviesLocation),
         "Video Files (*.mp4 *.avi *.mkv);;All Files (*)"
     );
+    if (filePath.isEmpty())  return;
 
-    if(!filePath.isEmpty())
-        m_listWidget->addItem(filePath);
+    QListWidgetItem *item = new QListWidgetItem(QFileInfo(filePath).fileName(), m_listWidget);
+    item->setData(Qt::UserRole, filePath);
+
+    m_listWidget->setCurrentItem(item);
+}
+
+void MediaLoader::playMedia(QListWidgetItem *item)
+{
+    if (!item)  return;
+
+    QString path = item->data(Qt::UserRole).toString();
+    emit EventBus::instance().startPlayRequested(path);
 }
