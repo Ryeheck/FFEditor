@@ -51,6 +51,25 @@ public:
         update();
     };
 
+    QString formatTime(qint64 ms)
+    {
+        int seconds = ms / 1000;
+        int hours = seconds / 3600;
+        seconds %= 3600;
+        int minutes = seconds / 60;
+        seconds %= 60;
+
+        if (hours > 0) {
+            return QString("%1:%2:%3")
+                    .arg(hours, 2, 10, QChar('0'))
+                    .arg(minutes, 2, 10, QChar('0'))
+                    .arg(seconds, 2, 10, QChar('0'));
+        }
+        return QString("%1:%2")
+                    .arg(minutes, 2, 10, QChar('0'))
+                    .arg(seconds, 2, 10, QChar('0'));
+    }
+
 protected:
     void paintEvent(QPaintEvent *event) override
     {
@@ -61,6 +80,7 @@ protected:
 
         painter.setPen(QPen(Qt::white, 2, Qt::SolidLine, Qt::RoundCap)); // Outline
         painter.drawRect(rect());
+
     };
 
     void mouseMoveEvent(QMouseEvent *event) override
@@ -73,6 +93,5 @@ protected:
 
         emit EventBus::instance().seekRequested(m_posMs);
     };
-    
 };
 #endif // CUSTOMPLAYHEAD_H
