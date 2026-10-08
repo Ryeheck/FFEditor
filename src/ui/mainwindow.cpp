@@ -98,13 +98,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     });
     
     // Hlayout (playhead)
-    QHBoxLayout *hLayoutPlayhead = new QHBoxLayout(this);
+    QHBoxLayout *hLayoutPlayhead = new QHBoxLayout();
     hLayoutPlayhead->addWidget(timeLabel);
     hLayoutPlayhead->addWidget(playhead);
     hLayoutPlayhead->addWidget(durLabel);
 
     // Bottom panel
-    QVBoxLayout *bottomPanel = new QVBoxLayout(this);
+    QVBoxLayout *bottomPanel = new QVBoxLayout();
     bottomPanel->setContentsMargins(10, 15, 10, 15);
     bottomPanel->setSpacing(5);
     
