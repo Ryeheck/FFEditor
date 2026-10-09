@@ -37,7 +37,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     loader = new MediaLoader(this);
     connect(&EventBus::instance(), &EventBus::startPlayRequested, this, [this] (const QString &path) {
-        if (!player->loadVideo(path)) {
+        QString filepath = path;
+
+        if (!player->loadVideo(filepath)) {
             qDebug() << "mainwn: Couldn't load video";
             return;
         }
