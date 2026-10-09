@@ -28,15 +28,18 @@ AudioOutput::~AudioOutput()
     qDebug() << "AudioOutput destroy";
 }
 
-bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate, AudioFormat format)
+bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate, int channels)
 {
     m_decoder = decoder;
-    m_sampleRate = sampleRate;
-    m_audioFormat = format == AudioFormat::Stereo ? 2 : 1;
+    m_sampleRate = 48000;
+    m_channels = channels;
+
+    if (sampleRate == -1)  m_sampleRate = channels == 2 ? 48000 : 41000;
+    if (channels   == -1)  m_channels   = 2;
 
     ma_device_config config = ma_device_config_init(ma_device_type_playback);
     config.playback.format   = ma_format_f32; // Works with float32 ([-1 : 1])
-    config.playback.channels = m_audioFormat; // Format audio
+    config.playback.channels = m_channels; // Format audio
     config.sampleRate        = m_sampleRate;  // Ghz
     config.dataCallback      = audioCallback; // Function
     config.pUserData         = this;          // Ptr on this player
@@ -64,7 +67,7 @@ void AudioOutput::audioCallback(ma_device *pDevice, void *pOutput, const void *p
 
 void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
 {
-    size_t samplesNeeded = frameCount * m_audioFormat;
+    size_t samplesNeeded = frameCount * m_channels;
     size_t samplesFilled = 0;
 
     while (samplesFilled < samplesNeeded) 
