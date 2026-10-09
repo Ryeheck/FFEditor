@@ -75,6 +75,8 @@ void MediaPlayer::processNextFrame()
 
 void MediaPlayer::cleanupDecoder()
 {
+    if (m_state == playbackState::Stopped) return;
+
     if (m_decoder) {
         m_decoder->stop();
 
@@ -98,7 +100,7 @@ bool MediaPlayer::initDecoder()
     return true;
 }
 
-bool MediaPlayer::initAudio()
+bool MediaPlayer::initAudio(int channels)
 {
     m_audio = new AudioOutput();
 
@@ -106,8 +108,12 @@ bool MediaPlayer::initAudio()
         qDebug() << "Core: Decoder not init";
         return false;
     }
-    if (!m_audio->init(m_decoder, 48000)) {
+    if (!m_audio->init(m_decoder, -1, channels)) {
         qDebug() << "Core: Coulnd't init audio";
+        return false;
+    }
+    if (!m_decoder->initAudio(channels)) {
+        qDebug() << "Core: Decoder couldn't init audio";
         return false;
     }
 
@@ -118,14 +124,15 @@ bool MediaPlayer::loadVideo(const QString &path)
 {  
     cleanupDecoder();
     if (!initDecoder())  return false;
-    if (!initAudio())    return false;
-
+   
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
-        cleanupDecoder();
+        stop();
         return false;
     }
-    
+    if (!initAudio())
+        return false;
+
     m_demuxThread       = std::thread(&Decoder::demuxLoop, m_decoder);
     m_videoDecodeThread = std::thread(&Decoder::decodeVideoLoop, m_decoder);
     m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);

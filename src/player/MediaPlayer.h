@@ -42,7 +42,7 @@ private slots:
 
 
 private:
-    bool initAudio();
+    bool initAudio(int channels = 2);
     bool initDecoder();
     void cleanupDecoder();
     void processNextFrame();
