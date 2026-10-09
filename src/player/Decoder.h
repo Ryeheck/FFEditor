@@ -52,9 +52,9 @@ public slots:
     void demuxLoop();
     void decodeAudioLoop();
     qint64 getDuration();
+    bool initAudio(int channels = 2);
 
 private:
-    bool initAudio();
     void seekTo(int64_t posMs);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;
@@ -79,6 +79,8 @@ private:
     std::atomic<bool> m_isSeeking{false};
     std::atomic<bool> m_Iframe{false};
 
+    int m_sampleRate       = -1;
+    int m_channels         = -1;
     int m_videoStreamIndex = -1;
     int m_audioStreamIndex = -1;
 };

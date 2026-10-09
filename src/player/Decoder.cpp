@@ -9,10 +9,12 @@
 #include <cstdint>
 #include <mutex>
 #include <qdebug.h>
+#include <qlogging.h>
 #include <qtypes.h>
 #include <thread>
 
 extern "C" {
+#include <libavutil/channel_layout.h>
 #include <libswresample/swresample.h>
 #include <libavcodec/packet.h>
 #include <libavutil/error.h>
@@ -118,15 +120,10 @@ bool Decoder::loadSource(const QString &filename)
         return false;
     }
 
-    // Init audio
-    if (!initAudio())
-        return false;
-
-
     return true;
 }
 
-bool Decoder::initAudio()
+bool Decoder::initAudio(int channels)
 {
     if (!m_codecContextAudio) {
         qDebug() << "contextAudio not init";
@@ -135,11 +132,25 @@ bool Decoder::initAudio()
     if (m_swrContext)
         swr_free(&m_swrContext);
 
-    AVChannelLayout chLayout = AV_CHANNEL_LAYOUT_STEREO;
+    
+    AVChannelLayout chLayout;
+    m_channels = channels;
+
+    if (m_channels == 1) {
+        chLayout = AV_CHANNEL_LAYOUT_MONO;
+        m_sampleRate = 44100;
+    } else if (m_channels == 2) {
+        chLayout = AV_CHANNEL_LAYOUT_STEREO;
+        m_sampleRate = 48000;
+    } else {
+        qDebug() << "Audio can't play in " << m_channels << "channels";
+        return false;
+    }
+
     int ret = swr_alloc_set_opts2(&m_swrContext, 
                                   &chLayout, 
                                   AV_SAMPLE_FMT_FLT, 
-                                  48000, 
+                                  m_sampleRate, 
                                   &m_codecContextAudio->ch_layout,
                                   m_codecContextAudio->sample_fmt,
                                   m_codecContextAudio->sample_rate, 
@@ -325,22 +336,22 @@ void Decoder::decodeAudioLoop() // Prototype
                 audioFrame aFrame;
                 aFrame.posMs = posMs;
 
-                //  maxOutSamples = (delay + in_rate) * 48000 / in_rate
+                //  maxOutSamples = (delay + in_rate) * m_sampleRate / in_rate
                 int maxOutSamples = av_rescale_rnd(
                                         swr_get_delay(m_swrContext, m_codecContextAudio->sample_rate) 
                                             + frame->nb_samples, 
-                                        48000, m_codecContextAudio->sample_rate, AV_ROUND_UP
+                                        m_sampleRate, m_codecContextAudio->sample_rate, AV_ROUND_UP
                 );
 
-                // Alloc for STEREO
-                aFrame.samples.resize(maxOutSamples * 2);
+                // Alloc for audio
+                aFrame.samples.resize(maxOutSamples * m_channels);
                 uint8_t *outData = reinterpret_cast<uint8_t *>(aFrame.samples.data());
 
                 int samples = swr_convert(m_swrContext, &outData, maxOutSamples, 
                                         (const uint8_t **)frame->data, frame->nb_samples);
                     
-                // Actuall samples for STEREO
-                aFrame.samples.resize(samples * 2);
+                // Actuall samples for audio
+                aFrame.samples.resize(samples * m_channels);
 
                 // Push frame to queue
                 if (!m_frameAQueue.push(aFrame)) {
