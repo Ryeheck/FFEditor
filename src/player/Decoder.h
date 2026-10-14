@@ -13,6 +13,7 @@
 #include <vector>
 
 extern "C" {
+#include <libavutil/avutil.h>
 #include <libavcodec/packet.h>
 #include "libswresample/swresample.h"
 #include <libavformat/avformat.h>
@@ -53,9 +54,12 @@ public slots:
     void decodeAudioLoop();
     qint64 getDuration();
     bool initAudio(int channels = 2);
-
+    void notify();
+    
 private:
     void seekTo(int64_t posMs);
+    bool demuxShouldWait();
+
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;
 
@@ -63,12 +67,12 @@ private:
     AVCodecContext *m_codecContextVideo = nullptr;
     AVFormatContext *m_formatContext    = nullptr;
     SwrContext *m_swrContext            = nullptr;
-
+    
     FrameQueue<AVPacket *> m_pktVQueue;
     FrameQueue<AVPacket *> m_pktAQueue;
     
-    FrameQueue<videoFrame> m_frameVQueue;
-    FrameQueue<audioFrame> m_frameAQueue;
+    FrameQueue<videoFrame > m_frameVQueue;
+    FrameQueue<audioFrame > m_frameAQueue;
 
     std::mutex videoMtx;
     std::mutex audioMtx;
@@ -79,6 +83,7 @@ private:
     std::atomic<bool> m_isSeeking{false};
     std::atomic<bool> m_Iframe{false};
 
+    int64_t m_duration     = -1;
     int m_sampleRate       = -1;
     int m_channels         = -1;
     int m_videoStreamIndex = -1;

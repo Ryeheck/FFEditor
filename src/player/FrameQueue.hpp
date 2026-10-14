@@ -4,11 +4,15 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QWaitCondition>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <qmutex.h>
 #include <queue>
 #include <QDebug>
 
 extern "C" {
+#include <libavutil/rational.h>
 #include <libavutil/frame.h>
 #include <libavcodec/packet.h>
 }
@@ -17,22 +21,32 @@ template <typename T>
 class FrameQueue
 {
 public:
-    explicit FrameQueue(size_t maxSize = 15) : m_maxSize(maxSize), m_abort(false) {}
+    using dtsExtractor = std::function<int64_t(const T &)>;
+    using sizeExtractor = std::function<int64_t(const T &)>;
+
+    explicit FrameQueue() {}
+
     ~FrameQueue() 
     {  
         clear();  
         qDebug() << "FrameQueue destroy";
     }
 
+    bool init(dtsExtractor dtsExtract, AVRational timeBase, sizeExtractor sizeExtract)
+    {
+        QMutexLocker locker(&m_mutex);
+
+        m_sizeExtract = sizeExtract;
+        m_dtsExtract  = dtsExtract;
+        m_timeBase    = timeBase;
+
+        return true;
+    }
+
     bool push(const T &value)
     {
         QMutexLocker locker(&m_mutex);
 
-        // If queue > maxSize
-        while (m_queue.size() >= m_maxSize && !m_abort)
-        {
-            m_condNotFull.wait(&m_mutex);
-        }
         if (m_abort) {
             qDebug() << "FrameQueue: abort";
             return false;
@@ -41,7 +55,18 @@ public:
         m_queue.push(value);
         m_condNotEmpty.wakeOne();
 
+        if (m_sizeExtract)
+            m_totalBytes += m_sizeExtract(value);
+
+        updateDurationLocked();
+
         return true;
+    }
+
+    bool empty()
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_queue.empty();
     }
 
     bool peek(T &value)
@@ -71,14 +96,23 @@ public:
         value = m_queue.front();
         m_queue.pop();
         m_condNotFull.wakeOne();
+
+        if (m_sizeExtract)
+            m_totalBytes -= m_sizeExtract(value);
+
+        updateDurationLocked();
         
         return true;
     }
 
-    bool isFull()
+    bool isFull(int64_t durationMs, int64_t totalBytes)
     {
         QMutexLocker locker(&m_mutex);
-        return m_queue.size() >= m_maxSize;
+
+        bool durIsFull   = (durationMs > 0) && (m_duration >= durationMs);
+        bool bytesIsFull = (totalBytes > 0) && (m_totalBytes >= totalBytes);
+
+        return durIsFull || bytesIsFull;
     }
 
     void clear()
@@ -91,9 +125,18 @@ public:
             m_queue.pop();
         }
 
+        m_duration = 0;
+        m_totalBytes = 0;
         m_abort = false;
         m_condNotEmpty.wakeAll();
         m_condNotFull.wakeAll();
+    }
+
+
+    int64_t getDurationMs()
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_duration;
     }
 
     void abort()
@@ -106,12 +149,33 @@ public:
     }
 
 private:
+    void updateDurationLocked()
+    {
+        // Dur = (PTSlast - PTSfirst) * timeBase * 1000
+
+        if (m_queue.size() < 2 || !m_dtsExtract) {
+            m_duration = 0;
+            return;
+        }
+
+        const int64_t lastDts  = m_dtsExtract(m_queue.back());
+        const int64_t firstDts = m_dtsExtract(m_queue.front());
+
+        int64_t diffPts = lastDts - firstDts;
+        if (diffPts < 0 || m_timeBase.den < 0) {
+            m_duration = 0;
+            return;
+        }
+
+        m_duration = static_cast<int64_t >(diffPts * av_q2d(m_timeBase) * 1000);
+    }
+
     QMutex m_mutex;
     QWaitCondition m_condNotEmpty;
     QWaitCondition m_condNotFull;
 
     template<typename U>
-    void freeItem(const U& ) {}
+    void freeItem(const U &) {}
     void freeItem(AVPacket *packet) {
         if (packet)
             av_packet_free(&packet);
@@ -119,8 +183,14 @@ private:
 
     std::queue<T> m_queue;
 
-    size_t m_maxSize;
-    bool m_abort;
+    dtsExtractor m_dtsExtract   = nullptr;
+    sizeExtractor m_sizeExtract = nullptr;
+    AVRational m_timeBase{1, 1000};
+
+    int64_t m_totalBytes = 0;
+    int64_t m_duration = 0;
+    size_t m_maxSize = 300;
+    bool m_abort = false;
 };
 
 #endif // FRAMEQUEUE_HPP

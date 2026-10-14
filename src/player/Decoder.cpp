@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <qdebug.h>
@@ -14,6 +15,10 @@
 #include <thread>
 
 extern "C" {
+#include <libavutil/rational.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/pixfmt.h>
+#include <libavutil/frame.h>
 #include <libavutil/channel_layout.h>
 #include <libswresample/swresample.h>
 #include <libavcodec/packet.h>
@@ -23,13 +28,38 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
-Decoder::Decoder(QObject *parent) : QObject(parent),
-                                    m_pktVQueue(300),
-                                    m_pktAQueue(300),
-                                    m_frameVQueue(15),
-                                    m_frameAQueue(300)
+Decoder::Decoder(QObject *parent) : QObject(parent)
 {
     connect(&EventBus::instance(), &EventBus::seekRequested, this, &Decoder::seek);
+}
+
+static int64_t pktDtsExtract(const AVPacket *pkt) {
+    if (!pkt)  return 0;
+    return pkt->dts != AV_NOPTS_VALUE ? pkt->dts : pkt->pts;
+}
+
+static int64_t pktSizeExtract(const AVPacket *pkt) {
+    if (!pkt)  return 0;
+    return pkt->size;
+}
+
+static int64_t VFrameMsExtract(const videoFrame &VFrame) {
+    return VFrame.posMs;
+}
+
+static int64_t VFrameSizeExtract(const videoFrame &VFrame) {
+    const AVFrame *frame = VFrame.frame.get();
+    if (!frame)  return 0;
+    return av_image_get_buffer_size((AVPixelFormat)frame->format,
+                                    frame->width, frame->height, 1);
+}
+
+static int64_t AFrameMsExtract(const audioFrame &aFrame) {
+    return aFrame.posMs;
+}
+
+static int64_t AFrameSizeExtract(const audioFrame &aFrame) {
+    return static_cast<int64_t>(aFrame.samples.size() * sizeof(float));
 }
 
 bool Decoder::loadSource(const QString &filename)
@@ -67,14 +97,30 @@ bool Decoder::loadSource(const QString &filename)
     
     // Not any streams
     if (m_videoStreamIndex == -1 || m_audioStreamIndex == -1) {
-        qDebug() << "Couldn't open stream";
+        qDebug() << "Couldn't open stream\n" 
+                 << "Video stream:" << m_videoStreamIndex
+                 << "Audio stream:" << m_audioStreamIndex;
         clear();
         return false;
     }
 
-    // Send duration in UI
-    qint64 durationMs = getDuration();
-    emit EventBus::instance().durationChanged(durationMs);
+    // Init queues
+    m_pktVQueue.init(pktDtsExtract, 
+                     m_formatContext->streams[m_videoStreamIndex]->time_base, 
+                     pktSizeExtract
+    );
+    m_pktAQueue.init(pktDtsExtract, 
+                     m_formatContext->streams[m_audioStreamIndex]->time_base, 
+                     pktSizeExtract
+    );
+    m_frameVQueue.init(VFrameMsExtract, 
+                       AVRational{1, 1000}, 
+                       VFrameSizeExtract
+    );
+    m_frameAQueue.init(AFrameMsExtract, 
+                       AVRational{1, 1000}, 
+                       AFrameSizeExtract
+    );
 
     // Open codecs
     AVCodecParameters *codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
@@ -121,6 +167,15 @@ bool Decoder::loadSource(const QString &filename)
     }
 
     return true;
+}
+
+void Decoder::notify()
+{
+    // Send duration in UI
+    qint64 durationMs = getDuration();
+    emit EventBus::instance().durationChanged(durationMs);
+
+    // Etc
 }
 
 bool Decoder::initAudio(int channels)
@@ -178,7 +233,7 @@ void Decoder::demuxLoop()
             continue;
         }
 
-        if (m_pktVQueue.isFull() || m_pktAQueue.isFull()) {
+        if (demuxShouldWait()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
@@ -189,11 +244,9 @@ void Decoder::demuxLoop()
         if (ret < 0) { // If any error
             av_packet_free(&packet);
 
-            // end file
-            if (ret == AVERROR_EOF) {
-                m_pktAQueue.push(nullptr);
-                m_pktVQueue.push(nullptr);
-            }
+            m_pktAQueue.push(nullptr);
+            m_pktVQueue.push(nullptr);
+            
             char errbuf[AV_ERROR_MAX_STRING_SIZE];
             av_strerror(ret, errbuf, sizeof(errbuf));
             qDebug() << "Demux: " << errbuf;
@@ -222,8 +275,16 @@ void Decoder::decodeVideoLoop()
     
     AVFrame *frame = av_frame_alloc();
 
+    constexpr int64_t durMs = 1000;                // Max queue = 1 sec
+    constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
+
     while (m_running.load()) 
     {
+        if (m_frameVQueue.isFull(durMs, KBytes)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            continue;
+        }
+
         AVPacket *packet = nullptr;
         if (!m_pktVQueue.pop(packet)) 
             break;
@@ -307,8 +368,16 @@ void Decoder::decodeAudioLoop() // Prototype
     
     AVFrame *frame = av_frame_alloc();
 
+    int64_t durMs  = 5000;             // Max queue = 5 sec
+    int64_t KBytes = 5 * 1024 * 1024;  // Max queue = 5 Mb
+
     while (m_running.load()) 
     {
+        if (m_frameAQueue.isFull(durMs, KBytes)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            continue;
+        }
+
         AVPacket *packet = nullptr;
         if (!m_pktAQueue.pop(packet)) 
             break;
@@ -434,10 +503,10 @@ void Decoder::seekTo(int64_t posMs)
     }
 
     // Clear queue
-    m_pktVQueue.clear();
     m_pktAQueue.clear();
-    m_frameVQueue.clear();
+    m_pktVQueue.clear();
     m_frameAQueue.clear();
+    m_frameVQueue.clear();
     
     {
         std::lock_guard<std::mutex> lock(videoMtx);
@@ -452,6 +521,25 @@ void Decoder::seekTo(int64_t posMs)
             m_Iframe.store(true);
         }
     }
+}
+
+bool Decoder::demuxShouldWait()
+{
+    constexpr int64_t durMs  = 5000;             // Max queue = 5 sec
+    constexpr int64_t KBytes = 5 * 1024 * 1024;  // Max queue = 5 Mb
+
+    if (m_pktVQueue.empty() || m_pktAQueue.empty()) {
+        // MAX LIMIT
+        if (m_pktVQueue.isFull(durMs * 3, KBytes * 3) || 
+            m_pktAQueue.isFull(durMs * 3, KBytes * 3))  
+            return true;
+        return false;
+    }
+    // Default limit
+    if (m_pktVQueue.isFull(durMs, KBytes) || 
+        m_pktAQueue.isFull(durMs, KBytes))
+        return true;
+    return false;
 }
 
 int64_t Decoder::getFramePosMs(const AVFrame *frame, int streamIndex) const
