@@ -124,15 +124,17 @@ bool MediaPlayer::loadVideo(const QString &path)
 {  
     cleanupDecoder();
     if (!initDecoder())  return false;
-   
+    
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
         stop();
         return false;
     }
-    if (!initAudio())
+    if (!initAudio())    
         return false;
-
+    
+    m_decoder->notify();
+    
     m_demuxThread       = std::thread(&Decoder::demuxLoop, m_decoder);
     m_videoDecodeThread = std::thread(&Decoder::decodeVideoLoop, m_decoder);
     m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);
