@@ -64,8 +64,9 @@ static int64_t AFrameSizeExtract(const audioFrame &aFrame) {
 
 bool Decoder::loadSource(const QString &filename)
 {
-    // Close old video file
+    // Close old video file and reset 
     clear();
+    reset();
 
     // Open new video file  
     if (avformat_open_input(&m_formatContext, filename.toUtf8().constData(), NULL, NULL) != 0) {
@@ -173,9 +174,11 @@ void Decoder::notify()
 {
     // Send duration in UI
     qint64 durationMs = getDuration();
+    m_duration = durationMs;
+
     emit EventBus::instance().durationChanged(durationMs);
 
-    // Etc
+    m_running.store(true);
 }
 
 bool Decoder::initAudio(int channels)
@@ -224,8 +227,6 @@ bool Decoder::initAudio(int channels)
 
 void Decoder::demuxLoop()
 {
-    m_running.store(true);
-
     while (m_running.load())
     {
         if (m_seekReq.exchange(false)) {
@@ -271,8 +272,6 @@ void Decoder::demuxLoop()
 
 void Decoder::decodeVideoLoop()
 {
-    m_running.store(true);
-    
     AVFrame *frame = av_frame_alloc();
 
     constexpr int64_t durMs = 1000;                // Max queue = 1 sec
@@ -359,13 +358,11 @@ void Decoder::decodeVideoLoop()
     }
     av_frame_free(&frame);
 
-    emit EventBus::instance().decoderFinished();
+    // emit EventBus::instance().decoderFinished();
 }
 
 void Decoder::decodeAudioLoop() // Prototype
 {
-    m_running.store(true);
-    
     AVFrame *frame = av_frame_alloc();
 
     int64_t durMs  = 5000;             // Max queue = 5 sec
@@ -453,13 +450,30 @@ void Decoder::clear()
     m_frameAQueue.clear();
     m_frameVQueue.clear();
 
-    m_seekReq.store(false);
-    m_seekTargetMs.store(0);
-
     if (m_codecContextVideo)  avcodec_free_context(&m_codecContextVideo);
     if (m_codecContextAudio)  avcodec_free_context(&m_codecContextAudio);
     if (m_formatContext)      avformat_close_input(&m_formatContext);
     if (m_swrContext)         swr_free(&m_swrContext);
+}
+
+void Decoder::reset()
+{
+    m_pktAQueue  .reset();
+    m_pktVQueue  .reset();
+    m_frameAQueue.reset();
+    m_frameVQueue.reset();
+
+    m_seekTargetMs.store(0);
+    m_running     .store(false);
+    m_seekReq     .store(false);
+    m_isSeeking   .store(false);
+    m_Iframe      .store(false);
+
+    m_duration         = -1;
+    m_sampleRate       = -1;
+    m_channels         = -1;
+    m_videoStreamIndex = -1;
+    m_audioStreamIndex = -1;
 }
 
 void Decoder::seek(qint64 posMs)

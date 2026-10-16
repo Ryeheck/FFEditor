@@ -46,6 +46,7 @@ public:
 
 public slots:
     void stop();
+    void reset();
     void clear();
     bool loadSource(const QString &filename);
     void seek(qint64 posMs); 
