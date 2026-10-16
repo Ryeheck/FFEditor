@@ -23,22 +23,24 @@ public:
     
 public slots:
     void start();
+    void reset();
+    void stop();
     bool init(Decoder *decoder, uint64_t samplesRate = -1, int channels = -1);
     void seekTo(qint64 posMs);
     qint64 getAudioClockMs();
-    void stop();
+    void uninit();
     void setVolume(const float volume);
     void setDuration(const uint64_t duration);
 
 private:
     static void audioCallback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
     void readSamples(float *pOutput, ma_uint32 frameCount);
-    
 
     ma_device m_audioDevice;
+
     bool m_init = false;
-    Decoder *m_decoder = nullptr;
-    audioFrame m_aFrame;
+    Decoder *m_decoder    = nullptr;
+    audioFrame m_aFrame   = audioFrame{};
     size_t m_aFrameOffset = 0;
     uint64_t m_sampleRate = 0;
     uint64_t m_duration   = 0;
