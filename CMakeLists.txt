@@ -13,7 +13,7 @@ qt_add_resources(RESOURCES "assets/resources.qrc")
 
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(FFMPEG REQUIRED 
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
     libavformat
     libavutil
@@ -63,7 +63,6 @@ install(TARGETS FFEditor
 )
 
 target_include_directories(FFEditor PRIVATE 
-    ${FFMPEG_INCLUDE_DIRS}
     ${miniaudio_SOURCE_DIR}
 )
 
@@ -84,13 +83,11 @@ elseif(UNIX)
     )
 endif()
 
-target_link_directories(FFEditor PRIVATE ${FFMPEG_LIBRARY_DIRS})
-
 target_link_libraries(FFEditor
     PRIVATE
         Qt6::Core
         Qt6::Widgets
-        ${FFMPEG_LIBRARIES}
+        PkgConfig::FFMPEG
 )
 
 qt_generate_deploy_app_script(
