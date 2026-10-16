@@ -1,0 +1,79 @@
+name: Release AppImage
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    runs-on: ubuntu-22.04 
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config \
+            libfuse2 file \
+            libavformat-dev libavcodec-dev libavutil-dev \
+            libswresample-dev libswscale-dev \
+            libasound2-dev libpulse-dev \
+            libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-xinerama0 libxcb-shape0
+
+      - name: Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.6.*"
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Сборка
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          DESTDIR=$PWD/AppDir cmake --install build
+
+      - name: Tools linuxdeploy
+        run: |
+          base=https://github.com/linuxdeploy
+          wget -q $base/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q $base/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+
+      - name: Packaging in AppImage
+        run: |
+          export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$LD_LIBRARY_PATH"
+          export LINUXDEPLOY_OUTPUT_VERSION="${GITHUB_REF_NAME#v}"
+          export EXTRA_QT_PLUGINS="waylandcompositor;wayland-shell-integration"
+
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --desktop-file packaging/FFEditor.desktop \
+            --icon-file packaging/FFEditor.png \
+            --plugin qt \
+            --output appimage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: "*.AppImage"
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.AppImage"
