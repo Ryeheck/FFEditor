@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(FFEditor LANGUAGES CXX)
 
-find_package(Qt6 6.2 REQUIRED COMPONENTS 
+find_package(Qt6 6.5 REQUIRED COMPONENTS 
     Core 
     Widgets
 )
