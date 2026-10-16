@@ -65,6 +65,9 @@ jobs:
 
       - name: Build
         run: |
+          export PKG_CONFIG_PATH="$GITHUB_WORKSPACE/ffmpeg-install/lib/pkgconfig:$PKG_CONFIG_PATH"
+          ls $GITHUB_WORKSPACE/ffmpeg-install/lib/pkgconfig
+          pkg-config --modversion libavcodec
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr
