@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 project(FFEditor LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS 
+find_package(Qt6 6.2 REQUIRED COMPONENTS 
     Core 
     Widgets
-    MultimediaWidgets
-    Multimedia
 )
 
 qt_standard_project_setup()
@@ -92,8 +90,6 @@ target_link_libraries(FFEditor
     PRIVATE
         Qt6::Core
         Qt6::Widgets
-        Qt6::Multimedia
-        Qt6::MultimediaWidgets
         ${FFMPEG_LIBRARIES}
 )
 

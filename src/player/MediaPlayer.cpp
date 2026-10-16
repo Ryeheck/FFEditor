@@ -5,7 +5,6 @@
 
 #include <qdebug.h>
 #include <qobject.h>
-#include <QAudioOutput>
 #include <QDebug>
 #include <QImage>
 #include <QTimer>

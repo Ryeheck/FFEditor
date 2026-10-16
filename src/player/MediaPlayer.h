@@ -4,7 +4,6 @@
 #include "AudioOutput.h"
 #include "Decoder.h"
 
-#include <QAudioOutput>
 #include <QImage>
 #include <QThread>
 #include <QTimer>
