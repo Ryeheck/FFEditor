@@ -24,7 +24,7 @@ AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 
 AudioOutput::~AudioOutput()
 {
-    stop();
+    uninit();
     qDebug() << "AudioOutput destroy";
 }
 
@@ -49,9 +49,6 @@ bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate, int channels)
         return false;
     }
 
-    m_aFrameOffset = 0;
-    m_playedAudioSamples.store(0);
-    m_aFrame = audioFrame{};
     m_init = true;
 
     return true;
@@ -99,7 +96,7 @@ void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
 void AudioOutput::start()
 {
     if (m_init && ma_device_start(&m_audioDevice) != MA_SUCCESS) {
-        stop();
+        uninit();
         qDebug() << "AudioOutput: can't start audio";
     }
 }
@@ -116,6 +113,24 @@ void AudioOutput::setDuration(const uint64_t duration)
 }
 
 void AudioOutput::stop()
+{
+    if (m_init) {
+        ma_device_stop(&m_audioDevice);
+    }
+}
+
+void AudioOutput::reset()
+{
+    m_aFrameOffset = 0;
+    m_sampleRate   = 0;
+    m_duration     = 0;
+    m_decoder      = nullptr;
+    m_aFrame       = audioFrame{};
+    m_playedAudioSamples.store(0);
+    m_channels          .store(2);
+}
+
+void AudioOutput::uninit()
 {
     if (m_init) {
         ma_device_uninit(&m_audioDevice);
