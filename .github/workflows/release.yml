@@ -20,16 +20,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential cmake ninja-build pkg-config \
+            build-essential cmake ninja-build pkg-config nasm \
             libfuse2 file \
-            libavformat-dev libavcodec-dev libavutil-dev \
-            libswresample-dev libswscale-dev \
             libasound2-dev libpulse-dev \
             libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev \
             libxkbcommon-dev libxkbcommon-x11-dev \
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
             libxcb-keysyms1 libxcb-render-util0 \
             libxcb-xinerama0 libxcb-shape0
+            
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
