@@ -63,7 +63,7 @@ install(TARGETS FFEditor
 )
 
 target_include_directories(FFEditor PRIVATE 
-    ${FFMPEG_LIBRARY_DIRS}
+    ${FFMPEG_INCLUDE_DIRS}
     ${miniaudio_SOURCE_DIR}
 )
 
@@ -84,7 +84,7 @@ elseif(UNIX)
     )
 endif()
 
-target_link_directories(FFEditor PRIVATE ${FFMPEG_INCLUDE_DIRS})
+target_link_directories(FFEditor PRIVATE ${FFMPEG_LIBRARY_DIRS})
 
 target_link_libraries(FFEditor
     PRIVATE
