@@ -4,7 +4,6 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QWaitCondition>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <qmutex.h>
@@ -88,8 +87,12 @@ public:
             m_condNotEmpty.wait(&m_mutex);
         }
 
-        if (m_queue.empty() || m_abort) {
+        if (m_queue.empty()) {
             // qDebug() << "FrameQueue: queue is empty";
+            return false;
+        }
+        if (m_abort) {
+            qDebug() << "FrameQueue: abort";
             return false;
         }
 
@@ -119,19 +122,17 @@ public:
     {
         QMutexLocker locker(&m_mutex);
         
-        while (!m_queue.empty())
-        {
-            freeItem(m_queue.front());
-            m_queue.pop();
-        }
-
-        m_duration = 0;
-        m_totalBytes = 0;
-        m_abort = false;
-        m_condNotEmpty.wakeAll();
-        m_condNotFull.wakeAll();
+        clearLocked();
     }
 
+    void reset()
+    {
+        QMutexLocker locker(&m_mutex);
+
+        clearLocked();
+        m_abort = false;
+        // Another flags..
+    }
 
     int64_t getDurationMs()
     {
@@ -149,6 +150,20 @@ public:
     }
 
 private:
+    void clearLocked()
+    {
+        while (!m_queue.empty())
+        {
+            freeItem(m_queue.front());
+            m_queue.pop();
+        }
+        
+        m_duration   = 0;
+        m_totalBytes = 0;
+        m_condNotEmpty.wakeAll();
+        m_condNotFull.wakeAll();
+    }
+
     void updateDurationLocked()
     {
         // Dur = (PTSlast - PTSfirst) * timeBase * 1000
@@ -185,12 +200,11 @@ private:
 
     dtsExtractor m_dtsExtract   = nullptr;
     sizeExtractor m_sizeExtract = nullptr;
-    AVRational m_timeBase{1, 1000};
 
+    AVRational m_timeBase{1, 1000};
     int64_t m_totalBytes = 0;
-    int64_t m_duration = 0;
-    size_t m_maxSize = 300;
-    bool m_abort = false;
+    int64_t m_duration   = 0;
+    bool m_abort         = false;
 };
 
 #endif // FRAMEQUEUE_HPP
