@@ -63,7 +63,7 @@ install(TARGETS FFEditor
 )
 
 target_include_directories(FFEditor PRIVATE 
-    ${FFMPEG_INCLUDE_DIRS}
+    ${FFMPEG_LIBRARY_DIRS}
     ${miniaudio_SOURCE_DIR}
 )
 
