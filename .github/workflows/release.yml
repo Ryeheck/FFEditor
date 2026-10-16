@@ -43,6 +43,27 @@ jobs:
           arch: linux_gcc_64
           cache: true
 
+      - name: Cache FFmpeg
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/ffmpeg-install
+          key: ffmpeg-7.1-ubuntu2204-v1
+
+      - name: Build FFmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: |
+          wget -q https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
+          tar xf ffmpeg-7.1.tar.xz
+          cd ffmpeg-7.1
+          ./configure \
+            --prefix=$GITHUB_WORKSPACE/ffmpeg-install \
+            --enable-shared --disable-static \
+            --disable-programs --disable-doc --disable-debug \
+            --disable-autodetect --enable-zlib
+          make -j$(nproc)
+          make install
+
       - name: Build
         run: |
           cmake -B build -G Ninja \
