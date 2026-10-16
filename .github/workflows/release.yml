@@ -29,19 +29,10 @@ jobs:
             libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-shape0
       
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Qt 6
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.11.2"
-          host: linux
-          target: desktop
-          arch: linux_gcc_64
-          extra: "--base https://mirrors.ocf.berkeley.edu/qt/"
-          cache: true
+      - name: Qt 6 from apt
+        run: |
+          sudo apt-get install -y qt6-base-dev qt6-base-dev-tools \
+            qt6-wayland libqt6svg6-dev
 
       - name: Build
         run: |
@@ -60,8 +51,7 @@ jobs:
 
       - name: Packaging in AppImage
         run: |
-          export QMAKE="$QT_ROOT_DIR/bin/qmake"
-          export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$LD_LIBRARY_PATH"
+          export QMAKE=/usr/lib/qt6/bin/qmake"
           export LINUXDEPLOY_OUTPUT_VERSION="${GITHUB_REF_NAME#v}"
           export EXTRA_QT_PLUGINS="waylandcompositor;wayland-shell-integration"
 
