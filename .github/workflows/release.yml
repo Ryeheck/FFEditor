@@ -28,6 +28,10 @@ jobs:
             libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 \
             libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-shape0
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Qt 6
         uses: jurplel/install-qt-action@v4
@@ -38,7 +42,7 @@ jobs:
           arch: linux_gcc_64
           cache: true
 
-      - name: Сборка
+      - name: Build
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
