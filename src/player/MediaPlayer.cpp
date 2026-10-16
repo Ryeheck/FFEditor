@@ -77,19 +77,21 @@ void MediaPlayer::cleanupDecoder()
 {
     if (m_state == playbackState::Stopped) return;
 
-    if (m_decoder) {
-        m_decoder->stop();
-
-        if (m_demuxThread.joinable())       m_demuxThread.join();
-        if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
-        if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
-
-        m_decoder->deleteLater();
-        m_decoder = nullptr;
-    }     
     if (m_renderTimer)  
         m_renderTimer->stop();
     
+    if (m_decoder) {
+        if (m_demuxThread.joinable())       m_demuxThread.join();
+        if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+        if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+        
+        m_decoder->clear();
+
+        m_decoder->reset();
+        m_decoder->deleteLater();
+    }     
+    
+    m_decoder = nullptr;
     m_state = playbackState::Stopped;
 }
 
@@ -99,6 +101,19 @@ bool MediaPlayer::initDecoder()
     
     return true;
 }
+
+void MediaPlayer::cleanupAudio()
+{
+    // m_state
+
+    if (m_audio) {
+        m_audio->uninit();
+        m_audio->deleteLater();
+        m_audio = nullptr;
+    }
+
+    // m_state
+}   
 
 bool MediaPlayer::initAudio(int channels)
 {
@@ -120,24 +135,46 @@ bool MediaPlayer::initAudio(int channels)
     return true;
 }
 
+void MediaPlayer::stopPlayback()
+{
+    if (m_renderTimer)  m_renderTimer->stop();
+
+    if (m_decoder)      m_decoder->stop();
+
+    if (m_demuxThread.joinable())       m_demuxThread.join();
+    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+        
+    if (m_audio) {  m_audio->stop();  m_audio->uninit();  }
+    if (m_decoder)  m_decoder->clear();
+
+    m_state = playbackState::Stopped;
+}
+
 bool MediaPlayer::loadVideo(const QString &path) 
 {  
-    cleanupDecoder();
-    if (!initDecoder())  return false;
-    
+    stopPlayback();
+
+    if (!m_decoder) {
+        if (!initDecoder())  return false;
+    } else {
+        m_decoder->reset();
+    }
+
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
         stop();
         return false;
     }
-    if (!initAudio())    
-        return false;
+
+    if (!initAudio())  return false;
     
     m_decoder->notify();
     
     m_demuxThread       = std::thread(&Decoder::demuxLoop, m_decoder);
     m_videoDecodeThread = std::thread(&Decoder::decodeVideoLoop, m_decoder);
     m_audioDecodeThread = std::thread(&Decoder::decodeAudioLoop, m_decoder);
+
     return true;
 }
 
@@ -177,7 +214,7 @@ void MediaPlayer::stop()
     if (m_renderTimer)  
         m_renderTimer->stop();
     if (m_audio)
-        m_audio->stop();
+        m_audio->uninit();
     
     cleanupDecoder();
 }

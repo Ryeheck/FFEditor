@@ -42,9 +42,11 @@ private slots:
 
 
 private:
+    void stopPlayback();
     bool initAudio(int channels = 2);
     bool initDecoder();
     void cleanupDecoder();
+    void cleanupAudio();
     void processNextFrame();
 
     std::thread m_demuxThread;
