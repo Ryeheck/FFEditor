@@ -1,7 +1,7 @@
 # FFEditor
 ![FFEditor](assets/images/FFEditor.png)
 
-A fast, lightweight desktop media player built with **C++**, **Qt** and **FFmpeg**. It is the foundation of a future video editor: the playback core is done, and editing tools are coming next.
+A lightweight desktop media player built with **C++**, **Qt** and **FFmpeg**. It is the foundation of a future video editor: the playback core is done, and GPU acceleration and editing tools are coming next.
 
 ![App Interface](assets/images/Main.png)
 
@@ -13,7 +13,7 @@ A fast, lightweight desktop media player built with **C++**, **Qt** and **FFmpeg
 *   **Accurate A/V Sync:** Audio is the master clock, and video follows it.
 *   **Precise Seeking:** Draggable playhead with time shown on the video and on the timeline (`00:00:00`). Seeking snaps to the nearest I-frame.
 *   **Playlist:** Open several files at once, switch between them and remove items.
-*   **Any Audio Layout:** The channel count is detected from the file, with no hardcoded stereo.
+*   **Any Audio Layout:** The channel count is detected from the file, with hardcoded stereo.
 *   **Playback Controls:** Play, pause, stop, reset and volume control.
 *   **Predictable Memory Usage:** Packet and frame queues are limited by size in KB, so heavy streams don't blow up RAM.
 
@@ -30,7 +30,8 @@ A fast, lightweight desktop media player built with **C++**, **Qt** and **FFmpeg
 
 *   [x] Video and audio playback with A/V sync
 *   [x] Seeking, playlist, volume control
-*   [x] AV1 support
+*   [x] AV1 support (software decoding via libdav1d)
+*   [ ] GPU-accelerated decoding and rendering
 *   [ ] Trimming and cutting
 
 ## Downloads & Releases
