@@ -47,11 +47,23 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/ffmpeg-install
-          key: ffmpeg-7.1-ubuntu2204-v1
+          key: ffmpeg-7.1-dav1d-1.4.3-ubuntu2204-v1
+
+      - name: Build dav1d
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get install -y meson
+          git clone --depth 1 --branch 1.4.3 https://code.videolan.org/videolan/dav1d.git
+          cd dav1d
+          meson setup build --prefix=$GITHUB_WORKSPACE/ffmpeg-install \
+            --libdir=lib --default-library=shared \
+            -Denable_tools=false -Denable_tests=false
+          ninja -C build install
 
       - name: Build FFmpeg
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         run: |
+          export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/ffmpeg-install/lib/pkgconfig
           wget -q https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
           tar xf ffmpeg-7.1.tar.xz
           cd ffmpeg-7.1
@@ -59,7 +71,8 @@ jobs:
             --prefix=$GITHUB_WORKSPACE/ffmpeg-install \
             --enable-shared --disable-static \
             --disable-programs --disable-doc --disable-debug \
-            --disable-autodetect --enable-zlib
+            --disable-autodetect --enable-zlib \
+            --enable-libdav1d
           make -j$(nproc)
           make install
 
