@@ -66,21 +66,13 @@ target_include_directories(FFEditor PRIVATE
     ${miniaudio_SOURCE_DIR}
 )
 
-if(WIN32)
-    target_link_libraries(FFEditor PRIVATE ole32 user32 winm)
-elseif(APPLE)
-    target_link_libraries(FFEditor PRIVATE
-    "-framework CoreAudio"
-    "-framework CoreFoundation"
-    "-framework AudioToolbox"
+if(WIN32 OR APPLE)
+    qt_generate_deploy_app_script(
+        TARGET FFEditor
+        OUTPUT_SCRIPT deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
     )
-elseif(UNIX)
-    find_package(Threads REQUIRED)
-    target_link_libraries(FFEditor PRIVATE
-        Threads::Threads
-        ${CMAKE_DL_LIBS}
-        m
-    )
+    install(SCRIPT ${deploy_script})
 endif()
 
 target_link_libraries(FFEditor
@@ -89,10 +81,3 @@ target_link_libraries(FFEditor
         Qt6::Widgets
         PkgConfig::FFMPEG
 )
-
-qt_generate_deploy_app_script(
-    TARGET FFEditor
-    OUTPUT_SCRIPT deploy_script
-    NO_UNSUPPORTED_PLATFORM_ERROR
-)
-install(SCRIPT ${deploy_script})
