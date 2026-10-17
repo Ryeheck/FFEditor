@@ -84,9 +84,10 @@ jobs:
       - name: Packaging in AppImage
         run: |
           export QMAKE="$QT_ROOT_DIR/bin/qmake"
-          export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$LD_LIBRARY_PATH"
+          export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$GITHUB_WORKSPACE/ffmpeg-install/lib:$LD_LIBRARY_PATH"
           export LINUXDEPLOY_OUTPUT_VERSION="${GITHUB_REF_NAME#v}"
-          export EXTRA_QT_PLUGINS="waylandcompositor;wayland-shell-integration"
+          export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"
+          export EXTRA_QT_PLUGINS="wayland-shell-integration;wayland-graphics-integration-client"
 
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
