@@ -15,6 +15,8 @@
 #include <thread>
 
 extern "C" {
+#include <libavcodec/codec.h>
+#include <libavcodec/codec_id.h>
 #include <libavutil/rational.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/pixfmt.h>
@@ -125,7 +127,12 @@ bool Decoder::loadSource(const QString &filename)
 
     // Open codecs
     AVCodecParameters *codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
-    const AVCodec *codec = avcodec_find_decoder(codecParams->codec_id);
+
+    const AVCodec *codec = nullptr;
+    if (codecParams->codec_id == AV_CODEC_ID_AV1)
+        codec = avcodec_find_decoder_by_name("libdav1d");
+    else
+        codec = avcodec_find_decoder(codecParams->codec_id);
 
     // Video codec
     m_codecContextVideo = avcodec_alloc_context3(codec);
@@ -147,7 +154,12 @@ bool Decoder::loadSource(const QString &filename)
 
     // Open codecs
     codecParams = m_formatContext->streams[m_audioStreamIndex]->codecpar;
-    codec = avcodec_find_decoder(codecParams->codec_id);
+    
+    codec = nullptr;
+    if (codecParams->codec_id == AV_CODEC_ID_AV1)
+        codec = avcodec_find_decoder_by_name("libdav1d");
+    else
+        codec = avcodec_find_decoder(codecParams->codec_id);
 
     // Audio codec
     m_codecContextAudio = avcodec_alloc_context3(codec);
