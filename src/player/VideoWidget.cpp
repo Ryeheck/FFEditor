@@ -4,6 +4,8 @@
 #include <QImage>
 #include <QPainter>
 #include <QWidget>
+#include <QOpenGLFunctions>
+#include <QOpenGLWidget>
 
 extern "C" {
 #include <libswscale/swscale.h>
