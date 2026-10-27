@@ -6,24 +6,36 @@
 #include <QWidget>
 #include <QImage>
 #include <QPainter>
+#include <libavutil/frame.h>
+#include <qimage.h>
+#include <qopenglfunctions.h>
+#include <qopenglvertexarrayobject.h>
+#include <qopenglwidget.h>
+#include <QOpenGLBuffer>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLTexture>
+#include <QOpenGLVertexArrayObject>
 
 extern "C" {
 #include <libswscale/swscale.h>
 }
 
-class VideoWidget : public QWidget
+class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 
 public:
     explicit VideoWidget(QWidget *parent = nullptr);
     ~VideoWidget() override;
+    void initializeGL() override; 
+    void resizeGL(int w, int h) override;
+    void paintGL() override; 
 
 public slots:
     void setFrame(const AVFramePtr &vFrame);
 
 protected:
-    void paintEvent(QPaintEvent *event) override;
+    
 
 private:
     QImage renderFrame(AVFrame *frame);
@@ -33,6 +45,11 @@ private:
 
     int m_bufferLinesize = 0;
     QImage m_currentFrame;
+
+    QOpenGLBuffer m_VertexBuf;
+    QOpenGLVertexArrayObject m_vao;
+    QOpenGLShaderProgram *m_program;
+    QOpenGLTexture *m_texture;
 };
 
 
