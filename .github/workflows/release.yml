@@ -105,7 +105,7 @@ jobs:
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --desktop-file packaging/FFEditor.desktop \
-            --icon-file packaging/FFEditor.png \
+            --icon-file assets/images/FFEditor.png \
             --plugin qt \
             --output appimage
 

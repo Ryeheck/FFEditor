@@ -4,6 +4,8 @@ project(FFEditor LANGUAGES CXX)
 find_package(Qt6 6.5 REQUIRED COMPONENTS 
     Core 
     Widgets
+    OpenGL
+    OpenGLWidgets
 )
 
 qt_standard_project_setup()
@@ -26,9 +28,8 @@ include(FetchContent)
 FetchContent_Declare(
     miniaudio
     GIT_REPOSITORY "https://github.com/mackron/miniaudio.git"
-    GIT_TAG        "master"
+    GIT_TAG        "0.11.25"
 )
-
 FetchContent_MakeAvailable(miniaudio)
 
 qt_add_executable(FFEditor
@@ -79,5 +80,7 @@ target_link_libraries(FFEditor
     PRIVATE
         Qt6::Core
         Qt6::Widgets
+        Qt6::OpenGL
+        Qt6::OpenGLWidgets
         PkgConfig::FFMPEG
 )

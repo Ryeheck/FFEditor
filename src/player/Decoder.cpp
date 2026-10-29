@@ -130,7 +130,10 @@ bool Decoder::loadSource(const QString &filename)
 
     const AVCodec *codec = nullptr;
     if (codecParams->codec_id == AV_CODEC_ID_AV1)
-        codec = avcodec_find_decoder_by_name("libdav1d");
+        for (const char *name : {"libdav1d", "libaom-av1", "av1"}) { // AV decoders
+            codec = avcodec_find_decoder_by_name(name);
+            if (codec)  break;
+        }
     else
         codec = avcodec_find_decoder(codecParams->codec_id);
 
@@ -157,7 +160,10 @@ bool Decoder::loadSource(const QString &filename)
     
     codec = nullptr;
     if (codecParams->codec_id == AV_CODEC_ID_AV1)
-        codec = avcodec_find_decoder_by_name("libdav1d");
+        for (const char *name : {"libdav1d", "libaom-av1", "av1"}) { // AV decoders
+            codec = avcodec_find_decoder_by_name(name);
+            if (codec)  break;
+        }
     else
         codec = avcodec_find_decoder(codecParams->codec_id);
 
@@ -288,6 +294,7 @@ void Decoder::decodeVideoLoop()
 
     constexpr int64_t durMs = 1000;                // Max queue = 1 sec
     constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
+    AVPacket *packet;
 
     while (m_running.load()) 
     {
@@ -296,7 +303,7 @@ void Decoder::decodeVideoLoop()
             continue;
         }
 
-        AVPacket *packet = nullptr;
+        packet = nullptr;
         if (!m_pktVQueue.pop(packet)) 
             break;
 
@@ -347,12 +354,21 @@ void Decoder::decodeVideoLoop()
             {  
                 qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
                 if (m_isSeeking.load()) {
+                    if (m_preview.exchange(false)) {
+                        videoFrame vFrame;
+                        vFrame.posMs = posMs;
+                        vFrame.frame = cloneToSharedPtr(frame);
+                        vFrame.preview = true;
+                        m_frameVQueue.push(vFrame);
+                    }
                     if (posMs < m_seekTargetMs.load()) {
+                        qDebug() << "Decoder: Video:" 
+                                 << "posMs:" << posMs << "TargetMs:" << m_seekTargetMs 
+                                 << "Diff:" << posMs - m_seekTargetMs;
                         av_frame_unref(frame);
                         continue;
-                    } else {
-                        m_isSeeking.store(false);
-                    }
+                    } 
+                    m_isSeeking.store(false);
                 }
                 videoFrame vFrame;
                 vFrame.posMs = posMs;
@@ -379,6 +395,7 @@ void Decoder::decodeAudioLoop() // Prototype
 
     int64_t durMs  = 5000;             // Max queue = 5 sec
     int64_t KBytes = 5 * 1024 * 1024;  // Max queue = 5 Mb
+    AVPacket *packet;
 
     while (m_running.load()) 
     {
@@ -387,7 +404,7 @@ void Decoder::decodeAudioLoop() // Prototype
             continue;
         }
 
-        AVPacket *packet = nullptr;
+        packet = nullptr;
         if (!m_pktAQueue.pop(packet)) 
             break;
 
@@ -480,6 +497,7 @@ void Decoder::reset()
     m_seekReq     .store(false);
     m_isSeeking   .store(false);
     m_Iframe      .store(false);
+    m_preview     .store(false);
 
     m_duration         = -1;
     m_sampleRate       = -1;
@@ -547,6 +565,8 @@ void Decoder::seekTo(int64_t posMs)
             m_Iframe.store(true);
         }
     }
+
+    m_preview.store(true);
 }
 
 bool Decoder::demuxShouldWait()

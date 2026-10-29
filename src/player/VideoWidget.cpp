@@ -4,6 +4,10 @@
 #include <QImage>
 #include <QPainter>
 #include <QWidget>
+#include <QOpenGLFunctions>
+#include <QOpenGLWidget>
+#include <libavutil/pixfmt.h>
+#include <qopengltexture.h>
 
 extern "C" {
 #include <libswscale/swscale.h>
@@ -11,18 +15,40 @@ extern "C" {
 #include <libavutil/mem.h>
 }
 
-VideoWidget::VideoWidget(QWidget *parent) : QWidget(parent)
+VideoWidget::VideoWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
-    setAttribute(Qt::WA_OpaquePaintEvent);
-
     connect(&EventBus::instance(), &EventBus::frameChanged, this, &VideoWidget::setFrame);
 }
 
 void VideoWidget::setFrame(const AVFramePtr &vFrame)
 {
     if (!vFrame)  return;
-
+    
     m_currentFrame = renderFrame(vFrame.get());
+
+    if (!m_texture) {
+        m_texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        m_texture->setSize(vFrame->width, vFrame->height);
+        m_texture->setFormat(QOpenGLTexture::RGBFormat);
+        m_texture->setMinificationFilter(QOpenGLTexture::Linear);
+        m_texture->setMagnificationFilter(QOpenGLTexture::Linear);
+        m_texture->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+        m_texture->allocateStorage();
+    }
+    if (m_texture->width()  != vFrame->width || 
+        m_texture->height() != vFrame->height) {
+        delete m_texture;
+
+        m_texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        m_texture->setSize(vFrame->width, vFrame->height);
+        m_texture->setFormat(QOpenGLTexture::RGBFormat);
+        m_texture->setMinificationFilter(QOpenGLTexture::Linear);
+        m_texture->setMagnificationFilter(QOpenGLTexture::Linear);
+        m_texture->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+        m_texture->allocateStorage();
+    }
 
     update();
 }
@@ -30,7 +56,7 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
 QImage VideoWidget::renderFrame(AVFrame *frame)
 {
     int align = 32;
-    int requestedSize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, 
+    int requestedSize = av_image_get_buffer_size(AV_PIX_FMT_RGB24, 
                                                  frame->width, frame->height, 
                                                  align);
 
@@ -44,7 +70,7 @@ QImage VideoWidget::renderFrame(AVFrame *frame)
     m_swsCtx = sws_getCachedContext(
         m_swsCtx, 
         frame->width, frame->height, (AVPixelFormat)frame->format,
-        frame->width, frame->height, AV_PIX_FMT_RGB32,
+        frame->width, frame->height, AV_PIX_FMT_RGB24,
         SWS_BICUBIC, NULL, NULL, NULL
     );
 
@@ -54,8 +80,8 @@ QImage VideoWidget::renderFrame(AVFrame *frame)
     }
 
     uint8_t *dest[4]    = {m_buffer, nullptr, nullptr, nullptr};
-    int linesize        = FFALIGN(frame->width * 4, align);
-    int destLinesize[4] = {linesize, 0, 0, 0}; // 4 bytes + align for pixel
+    int linesize        = FFALIGN(frame->width * 3, align);
+    int destLinesize[4] = {linesize, 0, 0, 0}; // 3 bytes + align for pixel
 
     if (sws_scale(m_swsCtx, frame->data, frame->linesize, 
                   0, frame->height, dest, destLinesize) 
@@ -65,23 +91,92 @@ QImage VideoWidget::renderFrame(AVFrame *frame)
     }
 
     return QImage(m_buffer, frame->width, frame->height, 
-                  linesize, QImage::Format_RGB32).copy();
+                  linesize, QImage::Format_RGB888).copy();
 }
 
-void VideoWidget::paintEvent(QPaintEvent *event)
+
+void VideoWidget::initializeGL()
 {
-    QPainter painter(this);
+    initializeOpenGLFunctions();
 
-    painter.fillRect(rect(), Qt::black);
+    m_program = new QOpenGLShaderProgram(this);
 
-    if (!m_currentFrame.isNull()) {
-        QImage scaledImg = m_currentFrame.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-        int x = (width() - scaledImg.width()) / 2;
-        int y = (height() - scaledImg.height()) / 2;
-
-        painter.drawImage(x, y, scaledImg);
+    if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vertex.vert")) {
+        qDebug() << "Couldn't add the vertex shader:" << m_program->log();
+        return;
     }
+    if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/fragment.frag")) {
+        qDebug() << "Couldn't add the fragment shader:" << m_program->log();
+        return;
+    }
+
+    if (!m_program->link()) {
+        qDebug() << "Error link:" << m_program->log();
+        return;
+    } else {
+        qDebug() << "Shaders success";
+    }
+
+    float vertices[] = {
+        -1.0f,  1.0f,      0.0f, 0.0f,
+        -1.0f, -1.0f,      0.0f, 1.0f,
+         1.0f, -1.0f,      1.0f, 1.0f,
+
+        -1.0f,  1.0f,      0.0f, 0.0f,
+         1.0f, -1.0f,      1.0f, 1.0f,
+         1.0f,  1.0f,      1.0f, 0.0f
+    };
+
+    m_vao.create();
+    m_vao.bind();
+
+    m_VertexBuf.create();
+    m_VertexBuf.bind();
+    m_VertexBuf.allocate(vertices, sizeof(vertices));
+    
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, 
+                          GL_FLOAT, GL_FALSE, 
+                          4 * sizeof(float), (void *)0);
+    
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, 
+                          GL_FLOAT, GL_FALSE, 
+                          4 * sizeof(float), (void *) (2 * sizeof(float)));
+
+    m_vao.release();
+    m_VertexBuf.release();
+}
+
+void VideoWidget::resizeGL(int w, int h) 
+{
+    glViewport(0, 0, w, h);
+}    
+
+void VideoWidget::paintGL() 
+{
+    glClearColor(0, 1, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    if (!m_texture) {
+        qDebug() << "Texture is NULL";
+        return;
+    }
+    if (m_currentFrame.isNull()) {
+        qDebug() << "QImage is NULL";
+        return;
+    }
+
+    m_texture->setData(QOpenGLTexture::RGB, QOpenGLTexture::UInt8, m_currentFrame.bits());
+
+    m_program->bind();
+    m_texture->bind(0);
+    m_program->setUniformValue("vTex", 0);
+
+    m_vao.bind();
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+    m_vao.release();
 }
 
 VideoWidget::~VideoWidget()
