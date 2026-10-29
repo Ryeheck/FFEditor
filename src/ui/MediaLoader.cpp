@@ -19,18 +19,18 @@ MediaLoader::MediaLoader(QWidget *parent)
     : QDialog(parent)
 {
     m_loaderLayout = new QVBoxLayout(this);
-    m_tabWidget = new QTabWidget(this);
+    m_tabWidget    = new QTabWidget(this);
 
-    m_fileTab = new QWidget();
+    m_fileTab    = new QWidget();
     m_networkTab = new QWidget();
 
     m_tabWidget->addTab(m_fileTab, "File");
     m_tabWidget->addTab(m_networkTab, "Network");
 
-    m_addButton = new QPushButton("Add file", this);
+    m_addButton    = new QPushButton("Add file", this);
     m_removeButton = new QPushButton("Remove file", this);
-    m_playButton = new QPushButton("Play", this);
-    m_closeButton = new QPushButton("Close", this);
+    m_playButton   = new QPushButton("Play", this);
+    m_closeButton  = new QPushButton("Close", this);
 
     // Main vertical layout to tab 1 ("File")
     QVBoxLayout *mainFileLayout = new QVBoxLayout(m_fileTab);

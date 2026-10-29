@@ -35,6 +35,8 @@ void MediaPlayer::processNextFrame()
         stop();
         return;
     }
+
+    // Preview
     if (vFrame.preview) {
         qDebug() << "Its preview!";
         m_decoder->getNextVFrame(vFrame);
@@ -43,7 +45,7 @@ void MediaPlayer::processNextFrame()
     }
 
     qint64 aPosMs = m_audio ? m_audio->getAudioClockMs() : vFrame.posMs;
-    int diffMs = vFrame.posMs - aPosMs;
+    int diffMs    = vFrame.posMs - aPosMs;
     
     /* Range [-50 ; 20] ms */
     // Videoframe is 50 ms behind
@@ -232,10 +234,12 @@ void MediaPlayer::pause()
 
 MediaPlayer::~MediaPlayer()
 {
-    cleanupDecoder();
-
-    if (m_renderTimer)
+    if (m_renderTimer) {
+        m_renderTimer->stop();
         m_renderTimer->deleteLater();
+    }
+    cleanupDecoder();
+    cleanupAudio();
 
     qDebug() << "MediaPlayer destroy";
 }

@@ -30,14 +30,14 @@ AudioOutput::~AudioOutput()
 
 bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate, int channels)
 {
-    m_decoder = decoder;
+    m_decoder    = decoder;
     m_sampleRate = 48000;
-    m_channels = channels;
+    m_channels   = channels;
 
     if (sampleRate == -1)  m_sampleRate = channels == 2 ? 48000 : 41000;
     if (channels   == -1)  m_channels   = 2;
 
-    ma_device_config config = ma_device_config_init(ma_device_type_playback);
+    ma_device_config config  = ma_device_config_init(ma_device_type_playback);
     config.playback.format   = ma_format_f32; // Works with float32 ([-1 : 1])
     config.playback.channels = m_channels; // Format audio
     config.sampleRate        = m_sampleRate;  // Ghz
@@ -73,7 +73,7 @@ void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
             audioFrame nextFrame;
 
             if (m_decoder && m_decoder->getNextAFrame(nextFrame)) {
-                m_aFrame = std::move(nextFrame);
+                m_aFrame       = std::move(nextFrame);
                 m_aFrameOffset = 0;
             } else {
                 std::fill_n(pOutput + samplesFilled, samplesNeeded - samplesFilled, 0.0f);
@@ -81,13 +81,13 @@ void AudioOutput::readSamples(float *pOutput, ma_uint32 frameCount)
             }
         }
         size_t samplesAvailable = m_aFrame.samples.size() - m_aFrameOffset;
-        size_t samplesToCopy = std::min(samplesNeeded -  samplesFilled, samplesAvailable);
+        size_t samplesToCopy    = std::min(samplesNeeded -  samplesFilled, samplesAvailable);
         std::copy_n(m_aFrame.samples.data() + m_aFrameOffset,
                     samplesToCopy,
                     pOutput + samplesFilled);
         
         m_aFrameOffset += samplesToCopy;
-        samplesFilled += samplesToCopy;
+        samplesFilled  += samplesToCopy;
 
     }
     m_playedAudioSamples.fetch_add(frameCount);
@@ -150,7 +150,7 @@ void AudioOutput::seekTo(const qint64 posMs)
     
     m_playedAudioSamples.store(targetSamples);
     m_aFrameOffset = 0;
-    m_aFrame = audioFrame{};
+    m_aFrame       = audioFrame{};
 }
 
 qint64 AudioOutput::getAudioClockMs()
