@@ -294,6 +294,7 @@ void Decoder::decodeVideoLoop()
 
     constexpr int64_t durMs = 1000;                // Max queue = 1 sec
     constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
+    AVPacket *packet;
 
     while (m_running.load()) 
     {
@@ -302,7 +303,7 @@ void Decoder::decodeVideoLoop()
             continue;
         }
 
-        AVPacket *packet = nullptr;
+        packet = nullptr;
         if (!m_pktVQueue.pop(packet)) 
             break;
 
@@ -385,6 +386,7 @@ void Decoder::decodeAudioLoop() // Prototype
 
     int64_t durMs  = 5000;             // Max queue = 5 sec
     int64_t KBytes = 5 * 1024 * 1024;  // Max queue = 5 Mb
+    AVPacket *packet;
 
     while (m_running.load()) 
     {
@@ -393,7 +395,7 @@ void Decoder::decodeAudioLoop() // Prototype
             continue;
         }
 
-        AVPacket *packet = nullptr;
+        packet = nullptr;
         if (!m_pktAQueue.pop(packet)) 
             break;
 
