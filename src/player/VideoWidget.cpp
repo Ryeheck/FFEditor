@@ -38,6 +38,7 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
     update();
 }
 
+
 QOpenGLTexture *VideoWidget::setTexture(int width, int height)
 {
     QOpenGLTexture *texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
