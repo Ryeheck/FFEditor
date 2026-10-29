@@ -354,12 +354,21 @@ void Decoder::decodeVideoLoop()
             {  
                 qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
                 if (m_isSeeking.load()) {
+                    if (m_preview.exchange(false)) {
+                        videoFrame vFrame;
+                        vFrame.posMs = posMs;
+                        vFrame.frame = cloneToSharedPtr(frame);
+                        vFrame.preview = true;
+                        m_frameVQueue.push(vFrame);
+                    }
                     if (posMs < m_seekTargetMs.load()) {
+                        qDebug() << "Decoder: Video:" 
+                                 << "posMs:" << posMs << "TargetMs:" << m_seekTargetMs 
+                                 << "Diff:" << posMs - m_seekTargetMs;
                         av_frame_unref(frame);
                         continue;
-                    } else {
-                        m_isSeeking.store(false);
-                    }
+                    } 
+                    m_isSeeking.store(false);
                 }
                 videoFrame vFrame;
                 vFrame.posMs = posMs;
@@ -488,6 +497,7 @@ void Decoder::reset()
     m_seekReq     .store(false);
     m_isSeeking   .store(false);
     m_Iframe      .store(false);
+    m_preview     .store(false);
 
     m_duration         = -1;
     m_sampleRate       = -1;
@@ -555,6 +565,8 @@ void Decoder::seekTo(int64_t posMs)
             m_Iframe.store(true);
         }
     }
+
+    m_preview.store(true);
 }
 
 bool Decoder::demuxShouldWait()
