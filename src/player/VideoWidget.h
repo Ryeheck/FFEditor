@@ -9,6 +9,7 @@
 #include <libavutil/frame.h>
 #include <qimage.h>
 #include <qopenglfunctions.h>
+#include <qopengltexture.h>
 #include <qopenglvertexarrayobject.h>
 #include <qopenglwidget.h>
 #include <QOpenGLBuffer>
@@ -39,7 +40,8 @@ protected:
 
 private:
     QImage renderFrame(AVFrame *frame);
-
+    QOpenGLTexture *setTexture(int width = 1920, int height = 1080);
+    
     SwsContext *m_swsCtx = nullptr;
     uint8_t *m_buffer    = nullptr;
 

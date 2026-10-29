@@ -19,7 +19,6 @@ VideoWidget::VideoWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     connect(&EventBus::instance(), &EventBus::frameChanged, this, &VideoWidget::setFrame);
 }
-
 void VideoWidget::setFrame(const AVFramePtr &vFrame)
 {
     if (!vFrame)  return;
@@ -27,30 +26,30 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
     m_currentFrame = renderFrame(vFrame.get());
 
     if (!m_texture) {
-        m_texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
-        m_texture->setSize(vFrame->width, vFrame->height);
-        m_texture->setFormat(QOpenGLTexture::RGBFormat);
-        m_texture->setMinificationFilter(QOpenGLTexture::Linear);
-        m_texture->setMagnificationFilter(QOpenGLTexture::Linear);
-        m_texture->setWrapMode(QOpenGLTexture::ClampToEdge);
-
-        m_texture->allocateStorage();
+        m_texture = m_texture = setTexture(vFrame->width, vFrame->height);
     }
     if (m_texture->width()  != vFrame->width || 
         m_texture->height() != vFrame->height) {
         delete m_texture;
 
-        m_texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
-        m_texture->setSize(vFrame->width, vFrame->height);
-        m_texture->setFormat(QOpenGLTexture::RGBFormat);
-        m_texture->setMinificationFilter(QOpenGLTexture::Linear);
-        m_texture->setMagnificationFilter(QOpenGLTexture::Linear);
-        m_texture->setWrapMode(QOpenGLTexture::ClampToEdge);
-
-        m_texture->allocateStorage();
+        m_texture = setTexture(vFrame->width, vFrame->height);
     }
 
     update();
+}
+
+
+QOpenGLTexture *VideoWidget::setTexture(int width, int height)
+{
+    QOpenGLTexture *texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
+    texture->setSize(width, height);
+    texture->setFormat(QOpenGLTexture::RGBFormat);
+    texture->setMinificationFilter(QOpenGLTexture::Linear);
+    texture->setMagnificationFilter(QOpenGLTexture::Linear);
+    texture->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+    texture->allocateStorage();
+    return texture;
 }
 
 QImage VideoWidget::renderFrame(AVFrame *frame)
