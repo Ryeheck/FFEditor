@@ -22,8 +22,8 @@ private slots:
 private:
     QListWidget *m_listWidget;
     QTabWidget  *m_tabWidget;
-    QWidget *m_fileTab;
-    QWidget *m_networkTab;
+    QWidget     *m_fileTab;
+    QWidget     *m_networkTab;
     QVBoxLayout *m_loaderLayout;
     QPushButton *m_addButton;
     QPushButton *m_removeButton;

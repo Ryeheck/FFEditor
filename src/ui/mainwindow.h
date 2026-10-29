@@ -25,12 +25,12 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     
 private:
-    VideoWidget *videoWidget;
-    QWidget *centralWidget;
-    MediaPlayer *player;
-    MediaLoader *loader;
-    QVBoxLayout *MainLayout;
-    CustomVolume *volumeSlider;
+    VideoWidget    *videoWidget;
+    QWidget        *centralWidget;
+    MediaPlayer    *player;
+    MediaLoader    *loader;
+    QVBoxLayout    *MainLayout;
+    CustomVolume   *volumeSlider;
     CustomPlayhead *playhead;
 };
 

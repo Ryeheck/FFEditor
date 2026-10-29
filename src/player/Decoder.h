@@ -24,13 +24,13 @@ using AVFramePtr = std::shared_ptr<AVFrame>;
 
 struct videoFrame {
     AVFramePtr frame = nullptr;
-    qint64 posMs     = 0;
-    bool preview     = false;
+    qint64 posMs = 0;
+    bool preview = false;
 };
 
 struct audioFrame {
-    std::vector<float> samples {0};
-    qint64 posMs               = 0;
+    std::vector<float> samples{0};
+    qint64 posMs = 0;
 };
 
 class Decoder : public QObject
@@ -79,13 +79,14 @@ private:
     std::mutex videoMtx;
     std::mutex audioMtx;
 
-    std::atomic<bool> m_running        {false};
-    std::atomic<bool> m_seekReq        {false};
-    std::atomic<bool> m_isSeeking      {false};
-    std::atomic<bool> m_Iframe         {false};
-    std::atomic<bool> m_preview        {false};
+    std::atomic<bool> m_running  {false};
+    std::atomic<bool> m_seekReq  {false};
+    std::atomic<bool> m_isSeeking{false};
+    std::atomic<bool> m_Iframe   {false};
+    std::atomic<bool> m_preview  {false};
+
     std::atomic<int64_t> m_seekTargetMs{0};
-    
+
     int64_t m_duration     = -1;
     int m_sampleRate       = -1;
     int m_channels         = -1;
