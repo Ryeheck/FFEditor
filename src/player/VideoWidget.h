@@ -43,13 +43,14 @@ private:
     SwsContext *m_swsCtx = nullptr;
     uint8_t *m_buffer    = nullptr;
 
-    int m_bufferLinesize = 0;
-    QImage m_currentFrame;
-
-    QOpenGLBuffer m_VertexBuf;
+    QImage                   m_currentFrame;
+    QOpenGLBuffer            m_VertexBuf;
     QOpenGLVertexArrayObject m_vao;
+    
     QOpenGLShaderProgram *m_program;
-    QOpenGLTexture *m_texture;
+    QOpenGLTexture       *m_texture;
+    
+    int m_bufferLinesize = 0;
 };
 
 

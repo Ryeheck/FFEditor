@@ -39,13 +39,17 @@ private:
     ma_device m_audioDevice;
 
     bool m_init = false;
-    Decoder *m_decoder    = nullptr;
-    audioFrame m_aFrame   = audioFrame{};
+
+    Decoder *m_decoder = nullptr;
+
+    audioFrame m_aFrame = audioFrame{};
+
     size_t m_aFrameOffset = 0;
     uint64_t m_sampleRate = 0;
     uint64_t m_duration   = 0;
+
     std::atomic<uint64_t> m_playedAudioSamples{0};
-    std::atomic<int> m_channels{2};
+    std::atomic<int> m_channels               {2};
 };
 
 #endif // AUDIOOUTPUT_H

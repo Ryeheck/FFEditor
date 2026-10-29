@@ -192,7 +192,7 @@ void Decoder::notify()
 {
     // Send duration in UI
     qint64 durationMs = getDuration();
-    m_duration = durationMs;
+    m_duration        = durationMs;
 
     emit EventBus::instance().durationChanged(durationMs);
 
@@ -292,7 +292,7 @@ void Decoder::decodeVideoLoop()
 {
     AVFrame *frame = av_frame_alloc();
 
-    constexpr int64_t durMs = 1000;                // Max queue = 1 sec
+    constexpr int64_t durMs  = 1000;                // Max queue = 1 sec
     constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
     AVPacket *packet;
 
@@ -356,9 +356,10 @@ void Decoder::decodeVideoLoop()
                 if (m_isSeeking.load()) {
                     if (m_preview.exchange(false)) {
                         videoFrame vFrame;
-                        vFrame.posMs = posMs;
-                        vFrame.frame = cloneToSharedPtr(frame);
+                        vFrame.posMs   = posMs;
+                        vFrame.frame   = cloneToSharedPtr(frame);
                         vFrame.preview = true;
+
                         m_frameVQueue.push(vFrame);
                     }
                     if (posMs < m_seekTargetMs.load()) {
@@ -465,8 +466,8 @@ void Decoder::stop()
 {
     m_running.store(false);
 
-    m_pktAQueue.abort();
-    m_pktVQueue.abort();
+    m_pktAQueue  .abort();
+    m_pktVQueue  .abort();
     m_frameAQueue.abort();
     m_frameVQueue.abort();
 }
@@ -474,8 +475,8 @@ void Decoder::stop()
 void Decoder::clear()
 {
     stop();
-    m_pktAQueue.clear();
-    m_pktVQueue.clear();
+    m_pktAQueue  .clear();
+    m_pktVQueue  .clear();
     m_frameAQueue.clear();
     m_frameVQueue.clear();
 
@@ -508,7 +509,7 @@ void Decoder::reset()
 
 void Decoder::seek(qint64 posMs)
 {
-    m_seekReq.store(true);
+    m_seekReq     .store(true);
     m_seekTargetMs.store(static_cast<int64_t>(posMs));
 }
 
@@ -547,8 +548,8 @@ void Decoder::seekTo(int64_t posMs)
     }
 
     // Clear queue
-    m_pktAQueue.clear();
-    m_pktVQueue.clear();
+    m_pktAQueue  .clear();
+    m_pktVQueue  .clear();
     m_frameAQueue.clear();
     m_frameVQueue.clear();
     
