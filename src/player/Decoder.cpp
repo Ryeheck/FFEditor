@@ -130,7 +130,10 @@ bool Decoder::loadSource(const QString &filename)
 
     const AVCodec *codec = nullptr;
     if (codecParams->codec_id == AV_CODEC_ID_AV1)
-        codec = avcodec_find_decoder_by_name("libdav1d");
+        for (const char *name : {"libdav1d", "libaom-av1", "av1"}) { // AV decoders
+            codec = avcodec_find_decoder_by_name(name);
+            if (codec)  break;
+        }
     else
         codec = avcodec_find_decoder(codecParams->codec_id);
 
@@ -157,7 +160,10 @@ bool Decoder::loadSource(const QString &filename)
     
     codec = nullptr;
     if (codecParams->codec_id == AV_CODEC_ID_AV1)
-        codec = avcodec_find_decoder_by_name("libdav1d");
+        for (const char *name : {"libdav1d", "libaom-av1", "av1"}) { // AV decoders
+            codec = avcodec_find_decoder_by_name(name);
+            if (codec)  break;
+        }
     else
         codec = avcodec_find_decoder(codecParams->codec_id);
 
