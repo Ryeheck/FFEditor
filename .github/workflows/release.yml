@@ -20,15 +20,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential cmake ninja-build pkg-config nasm \
-            libfuse2 file \
-            libasound2-dev libpulse-dev \
-            libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev \
-            libxkbcommon-dev libxkbcommon-x11-dev \
-            libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
-            libxcb-keysyms1 libxcb-render-util0 \
-            libxcb-xinerama0 libxcb-shape0 \
-            libglx-dev libopengl-dev
+            build-essential cmake ninja-build pkg-config nasm file \
+            libglvnd-dev libwayland-egl1 \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
+            libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-shape0 \
+            libasound2-dev libpulse-dev
             
       - uses: actions/setup-python@v5
         with:
@@ -100,8 +96,8 @@ jobs:
           export QMAKE="$QT_ROOT_DIR/bin/qmake"
           export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$GITHUB_WORKSPACE/ffmpeg-install/lib:$LD_LIBRARY_PATH"
           export LINUXDEPLOY_OUTPUT_VERSION="${GITHUB_REF_NAME#v}"
-          export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"
-          export EXTRA_QT_PLUGINS="wayland-shell-integration;wayland-graphics-integration-client"
+          export EXTRA_PLATFORM_PLUGINS="libqwayland.so"
+          export EXTRA_QT_PLUGINS="wayland-shell-integration;wayland-graphics-integration-client;xcbglintegrations"
 
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
