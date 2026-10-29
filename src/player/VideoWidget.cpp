@@ -26,7 +26,7 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
     m_currentFrame = renderFrame(vFrame.get());
 
     if (!m_texture) {
-        m_texture = m_texture = setTexture(vFrame->width, vFrame->height);
+        m_texture = setTexture(vFrame->width, vFrame->height);
     }
     if (m_texture->width()  != vFrame->width || 
         m_texture->height() != vFrame->height) {
