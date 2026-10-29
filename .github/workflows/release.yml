@@ -28,6 +28,7 @@ jobs:
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
             libxcb-keysyms1 libxcb-render-util0 \
             libxcb-xinerama0 libxcb-shape0
+            libglx-dev libopengl-dev
             
       - uses: actions/setup-python@v5
         with:
