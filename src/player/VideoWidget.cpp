@@ -188,5 +188,14 @@ VideoWidget::~VideoWidget()
         sws_freeContext(m_swsCtx);
         m_swsCtx = nullptr;
     }
+    if (m_texture) {
+        m_texture->deleteLater();
+        m_texture = nullptr;
+    }
+    if (m_program) {
+        m_program->deleteLater();
+        m_program = nullptr;
+    }
+
     qDebug() << "VideoWidget destroy";
 }
