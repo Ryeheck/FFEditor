@@ -96,7 +96,7 @@ void MediaPlayer::cleanupDecoder()
 
 bool MediaPlayer::initDecoder()
 {
-    m_decoder = new Decoder();
+    m_decoder = new Decoder(this);
     
     return true;
 }
@@ -116,7 +116,7 @@ void MediaPlayer::cleanupAudio()
 
 bool MediaPlayer::initAudio(int channels)
 {
-    m_audio = new AudioOutput();
+    m_audio = new AudioOutput(this);
 
     if (!m_decoder) {
         qDebug() << "Core: Decoder not init";

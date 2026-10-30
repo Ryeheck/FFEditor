@@ -25,10 +25,8 @@ AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
 AudioOutput::~AudioOutput()
 {
     uninit();
-    
-    if (m_decoder)  m_decoder->deleteLater();
     m_decoder = nullptr;
-
+    
     qDebug() << "AudioOutput destroy";
 }
 
