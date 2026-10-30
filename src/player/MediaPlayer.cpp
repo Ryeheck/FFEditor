@@ -83,27 +83,20 @@ void MediaPlayer::processNextFrame()
 void MediaPlayer::cleanupDecoder()
 {
     if (m_state == playbackState::Stopped) return;
-
     if (m_renderTimer)  m_renderTimer->stop();
     
     if (m_decoder) {
-        if (m_demuxThread.joinable())       m_demuxThread.join();
-        if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
-        if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
-        
         m_decoder->clear();
-
-        m_decoder->reset();
         m_decoder->deleteLater();
-    }     
-    
+    }
     m_decoder = nullptr;
+
     m_state = playbackState::Stopped;
 }
 
 bool MediaPlayer::initDecoder()
 {
-    m_decoder = new Decoder();
+    m_decoder = new Decoder(this);
     
     return true;
 }
@@ -115,15 +108,15 @@ void MediaPlayer::cleanupAudio()
     if (m_audio) {
         m_audio->uninit();
         m_audio->deleteLater();
-        m_audio = nullptr;
     }
+    m_audio = nullptr;
 
     // m_state
 }   
 
 bool MediaPlayer::initAudio(int channels)
 {
-    m_audio = new AudioOutput();
+    m_audio = new AudioOutput(this);
 
     if (!m_decoder) {
         qDebug() << "Core: Decoder not init";
@@ -216,9 +209,23 @@ void MediaPlayer::stop()
     if (m_state == playbackState::Stopped) return;
     m_state = playbackState::Stopped;
 
-    if (m_renderTimer)  m_renderTimer->stop();
-    if (m_audio)        m_audio->uninit();
-    
+    if (m_renderTimer) {
+        m_renderTimer->stop();
+        qDebug() << "Core: Timer stop...";
+    }
+    if (m_audio) {
+        m_audio->stop();
+        qDebug() << "Core: Audio stop...";
+    }
+    if (m_decoder) {
+        m_decoder->stop();
+        qDebug() << "Core: Decoder stop...";
+    }
+
+    if (m_demuxThread.joinable())       m_demuxThread.join();
+    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+
     cleanupDecoder();
 }
 
@@ -232,12 +239,16 @@ void MediaPlayer::pause()
 
 MediaPlayer::~MediaPlayer()
 {
-    if (m_renderTimer) {
-        m_renderTimer->stop();
-        m_renderTimer->deleteLater();
-    }
-    cleanupDecoder();
-    cleanupAudio();
+    if (m_renderTimer)  m_renderTimer->stop();
+    if (m_decoder)      m_decoder->stop();
+    if (m_audio)        m_audio->stop();
 
+    if (m_demuxThread.joinable())       m_demuxThread.join();
+    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+    
+    cleanupAudio();
+    cleanupDecoder();
+    
     qDebug() << "MediaPlayer destroy";
 }

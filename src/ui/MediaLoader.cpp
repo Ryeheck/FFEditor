@@ -21,8 +21,8 @@ MediaLoader::MediaLoader(QWidget *parent)
     m_loaderLayout = new QVBoxLayout(this);
     m_tabWidget    = new QTabWidget(this);
 
-    m_fileTab    = new QWidget();
-    m_networkTab = new QWidget();
+    m_fileTab    = new QWidget(this);
+    m_networkTab = new QWidget(this);
 
     m_tabWidget->addTab(m_fileTab, "File");
     m_tabWidget->addTab(m_networkTab, "Network");
@@ -75,6 +75,11 @@ MediaLoader::MediaLoader(QWidget *parent)
     });
 
     resize(560, 400);
+}
+
+MediaLoader::~MediaLoader()
+{
+    qDebug() << "MediaLoader destroy";
 }
 
 void MediaLoader::onAddButtonClicked()

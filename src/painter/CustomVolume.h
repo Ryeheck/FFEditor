@@ -10,6 +10,8 @@ class CustomVolume : public QWidget
 
 public:
     CustomVolume(QWidget *parent = nullptr);
+    ~CustomVolume() override;
+    
     void setValue(int value);
     int value() const {  return m_value;  };
 protected:

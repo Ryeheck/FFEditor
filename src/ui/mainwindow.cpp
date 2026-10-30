@@ -142,5 +142,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 MainWindow::~MainWindow()
 {
+    if (player) {
+        player->stop();
+    }
+    
+    
     qDebug() << "MainWindow destroy";
 }
