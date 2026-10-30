@@ -234,14 +234,16 @@ void MediaPlayer::pause()
 
 MediaPlayer::~MediaPlayer()
 {
-    if (m_renderTimer) {
-        m_renderTimer->stop();
-        m_renderTimer->deleteLater();
-    }
-    cleanupDecoder();
-    cleanupAudio();
+    if (m_renderTimer)  m_renderTimer->stop();
+    if (m_decoder)      m_decoder->stop();
+    if (m_audio)        m_audio->stop();
+
+    if (m_demuxThread.joinable())       m_demuxThread.join();
+    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
     
-    // THREAD
+    cleanupAudio();
+    cleanupDecoder();
     
     qDebug() << "MediaPlayer destroy";
 }

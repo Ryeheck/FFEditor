@@ -178,24 +178,28 @@ void VideoWidget::paintGL()
     m_vao.release();
 }
 
+void VideoWidget::cleanupGL()
+{
+    makeCurrent();
+
+    delete m_texture;  m_texture = nullptr;
+    delete m_program;  m_program = nullptr;
+
+    m_vao.destroy();
+    m_VertexBuf.destroy();
+
+    doneCurrent();
+}
+
 VideoWidget::~VideoWidget()
 {
-    if (m_buffer) {
-        av_free(m_buffer);
-        m_buffer = nullptr;
-    }
-    if (m_swsCtx) {
-        sws_freeContext(m_swsCtx);
-        m_swsCtx = nullptr;
-    }
-    if (m_texture) {
-        m_texture->deleteLater();
-        m_texture = nullptr;
-    }
-    if (m_program) {
-        m_program->deleteLater();
-        m_program = nullptr;
-    }
+    if (m_buffer)  av_free(m_buffer);
+    m_buffer = nullptr;
+    
+    if (m_swsCtx)  sws_freeContext(m_swsCtx); 
+    m_swsCtx = nullptr;
+    
+    cleanupGL();
 
     qDebug() << "VideoWidget destroy";
 }
