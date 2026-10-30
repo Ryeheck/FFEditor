@@ -238,6 +238,8 @@ MediaPlayer::~MediaPlayer()
     }
     cleanupDecoder();
     cleanupAudio();
-
+    
+    // THREAD
+    
     qDebug() << "MediaPlayer destroy";
 }

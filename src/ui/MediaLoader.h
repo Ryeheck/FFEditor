@@ -14,7 +14,7 @@ class MediaLoader : public QDialog
 
 public:
     MediaLoader(QWidget *parent = nullptr);
-    // ~MediaLoader();
+    ~MediaLoader() override;
 
 private slots:
     void onAddButtonClicked();
