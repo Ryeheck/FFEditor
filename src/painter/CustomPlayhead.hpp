@@ -33,6 +33,11 @@ public:
         connect(&EventBus::instance(), &EventBus::durationChanged, this, &CustomPlayhead::setDuration);
         connect(&EventBus::instance(), &EventBus::positionChanged, this, &CustomPlayhead::onPositionChanged);
     };
+    
+    ~CustomPlayhead() override
+    {
+        qDebug() << "CustomPlayhead destroy";
+    }
 
     void setDuration(qint64 durationMs) 
     {  
