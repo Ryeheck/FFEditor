@@ -21,8 +21,8 @@ MediaLoader::MediaLoader(QWidget *parent)
     m_loaderLayout = new QVBoxLayout(this);
     m_tabWidget    = new QTabWidget(this);
 
-    m_fileTab    = new QWidget();
-    m_networkTab = new QWidget();
+    m_fileTab    = new QWidget(this);
+    m_networkTab = new QWidget(this);
 
     m_tabWidget->addTab(m_fileTab, "File");
     m_tabWidget->addTab(m_networkTab, "Network");
@@ -79,43 +79,7 @@ MediaLoader::MediaLoader(QWidget *parent)
 
 MediaLoader::~MediaLoader()
 {
-    if (m_addButton) {
-        m_addButton->deleteLater();
-        m_addButton = nullptr;
-    }
-    if (m_removeButton) {
-        m_removeButton->deleteLater();
-        m_removeButton = nullptr;
-    }
-    if (m_playButton) {
-        m_playButton->deleteLater();
-        m_playButton = nullptr;
-    }
-    if (m_closeButton) {
-        m_closeButton->deleteLater();
-        m_closeButton = nullptr;
-    }
-    if (m_loaderLayout) {
-        m_loaderLayout->deleteLater();
-        m_loaderLayout = nullptr;
-    }
-    if (m_fileTab) {
-        m_fileTab->deleteLater();
-        m_fileTab = nullptr;
-    }
-    if (m_networkTab) {
-        m_networkTab->deleteLater();
-        m_networkTab = nullptr;
-    }
-    if (m_tabWidget) {
-        m_tabWidget->deleteLater();
-        m_tabWidget = nullptr;
-    }
-    if (m_listWidget) {
-        m_listWidget->deleteLater();
-        m_listWidget = nullptr;
-    }
-    
+    qDebug() << "MediaLoader destroy";
 }
 
 void MediaLoader::onAddButtonClicked()

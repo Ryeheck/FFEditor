@@ -142,35 +142,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 MainWindow::~MainWindow()
 {
-
-    if (videoWidget) {
-        VideoWidget->deleteLater();
-        videoWidget = nullptr;
-    }
-    if (loader) {
-        loader->deleteLater();
-        loader = nullptr;
-    }
     if (player) {
-        player->deleteLater();
-        player = nullptr;
+        player->stop();
     }
-    if (playhead) {
-        playhead->deleteLater();
-        playhead = nullptr;
-    }
-    if (volumeSlider) {
-        volumeSlider->deleteLater();
-        volumeSlider = nullptr;
-    }
-    if (centralWidget) {
-        centralWidget->deleteLater();
-        centralWidget = nullptr;
-    }
-    if (MainLayout) {
-        MainLayout->deleteLater();
-        MainLayout = nullptr;
-    }
+    
     
     qDebug() << "MainWindow destroy";
 }
