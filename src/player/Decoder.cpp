@@ -30,11 +30,6 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
-Decoder::Decoder(QObject *parent) : QObject(parent)
-{
-    connect(&EventBus::instance(), &EventBus::seekRequested, this, &Decoder::seek);
-}
-
 static int64_t pktDtsExtract(const AVPacket *pkt) {
     if (!pkt)  return 0;
     return pkt->dts != AV_NOPTS_VALUE ? pkt->dts : pkt->pts;
@@ -62,6 +57,11 @@ static int64_t AFrameMsExtract(const audioFrame &aFrame) {
 
 static int64_t AFrameSizeExtract(const audioFrame &aFrame) {
     return static_cast<int64_t>(aFrame.samples.size() * sizeof(float));
+}
+
+Decoder::Decoder(QObject *parent) : QObject(parent)
+{
+    connect(&EventBus::instance(), &EventBus::seekRequested, this, &Decoder::seek);
 }
 
 bool Decoder::loadSource(const QString &filename)
@@ -628,7 +628,7 @@ AVFramePtr Decoder::cloneToSharedPtr(AVFrame *frame)
 {
     AVFrame *dstFrame = av_frame_clone(frame);
 
-    return AVFramePtr(dstFrame, [](AVFrame *frame) {  av_frame_free(&frame);  });
+    return AVFramePtr(dstFrame, AVFrameDeleter());
 }
 
 qint64 Decoder::getDuration()
