@@ -20,6 +20,10 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
+struct AVFrameDeleter {
+    void operator()(AVFrame *f) const {  av_frame_free(&f);  }
+};
+
 using AVFramePtr = std::shared_ptr<AVFrame>;
 
 struct videoFrame {
@@ -61,6 +65,8 @@ public slots:
 private:
     void seekTo(int64_t posMs);
     bool demuxShouldWait();
+    bool drainVideoFrame(AVFrame *frame);
+    bool drainAudioFrame(AVFrame *frame);
 
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;
