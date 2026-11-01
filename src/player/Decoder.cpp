@@ -288,7 +288,6 @@ void Decoder::demuxLoop()
     }
 }
 
-
 bool Decoder::drainVideoFrame(AVFrame *frame)
 {
     if (!m_codecContextVideo || m_videoStreamIndex) {
@@ -385,7 +384,56 @@ void Decoder::decodeVideoLoop()
     av_frame_free(&frame);
 }
 
-void Decoder::decodeAudioLoop() // Prototype
+bool Decoder::drainAudioFrame(AVFrame *frame)
+{
+    while (m_running.load())
+    {  
+        int ret = avcodec_receive_frame(m_codecContextAudio, frame);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            return true;
+        if (ret < 0) {
+            char errbuf[AV_ERROR_MAX_STRING_SIZE];
+            av_strerror(ret, errbuf, sizeof(errbuf));
+            qDebug() << "Drain audio send: " << errbuf;
+            return false;
+        }
+
+        qint64 posMs = getFramePosMs(frame, m_audioStreamIndex);
+        if (m_Iframe.exchange(false)) 
+            emit EventBus::instance().positionAudioChanged(posMs);
+
+        audioFrame aFrame;
+        aFrame.posMs = posMs;
+
+        //  maxOutSamples = (delay + in_rate) * m_sampleRate / in_rate
+        int maxOutSamples = av_rescale_rnd(
+                                swr_get_delay(m_swrContext, m_codecContextAudio->sample_rate) 
+                                    + frame->nb_samples, 
+                                m_sampleRate, m_codecContextAudio->sample_rate, AV_ROUND_UP
+        );
+
+        // Alloc for audio
+        aFrame.samples.resize(maxOutSamples * m_channels);
+        uint8_t *outData = reinterpret_cast<uint8_t *>(aFrame.samples.data());
+
+        int samples = swr_convert(m_swrContext, &outData, maxOutSamples, 
+                                (const uint8_t **)frame->data, frame->nb_samples);
+                    
+        // Actuall samples for audio
+        aFrame.samples.resize(samples * m_channels);
+
+        // Push frame to queue
+        if (!m_frameAQueue.push(aFrame)) {
+            // If queue is full
+            av_frame_unref(frame);
+            return false;
+        }
+        av_frame_unref(frame);
+    }
+    return false;
+}
+
+void Decoder::decodeAudioLoop()
 {
     AVFrame *frame = av_frame_alloc();
 
@@ -417,40 +465,9 @@ void Decoder::decodeAudioLoop() // Prototype
             av_packet_free(&packet);
 
             if (ret < 0) continue;
-
-            while (m_running.load() && avcodec_receive_frame(m_codecContextAudio, frame) == 0) // FRAME LOAD
-            {  
-                qint64 posMs = getFramePosMs(frame, m_audioStreamIndex);
-                if (m_Iframe.exchange(false)) 
-                    emit EventBus::instance().positionAudioChanged(posMs);
-
-                audioFrame aFrame;
-                aFrame.posMs = posMs;
-
-                //  maxOutSamples = (delay + in_rate) * m_sampleRate / in_rate
-                int maxOutSamples = av_rescale_rnd(
-                                        swr_get_delay(m_swrContext, m_codecContextAudio->sample_rate) 
-                                            + frame->nb_samples, 
-                                        m_sampleRate, m_codecContextAudio->sample_rate, AV_ROUND_UP
-                );
-
-                // Alloc for audio
-                aFrame.samples.resize(maxOutSamples * m_channels);
-                uint8_t *outData = reinterpret_cast<uint8_t *>(aFrame.samples.data());
-
-                int samples = swr_convert(m_swrContext, &outData, maxOutSamples, 
-                                        (const uint8_t **)frame->data, frame->nb_samples);
-                    
-                // Actuall samples for audio
-                aFrame.samples.resize(samples * m_channels);
-
-                // Push frame to queue
-                if (!m_frameAQueue.push(aFrame)) {
-                    // If queue is full
-                    av_frame_unref(frame);
-                    break;
-                }
-                av_frame_unref(frame);
+            if (!drainAudioFrame(frame)) {
+                qDebug() << "drain video frame send false";
+                // Something..
             }
         }
     }
