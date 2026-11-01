@@ -61,7 +61,8 @@ public slots:
 private:
     void seekTo(int64_t posMs);
     bool demuxShouldWait();
-
+    bool drainVideoFrame(AVFrame *frame);
+    
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;
 

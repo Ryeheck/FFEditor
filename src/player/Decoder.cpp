@@ -288,11 +288,64 @@ void Decoder::demuxLoop()
     }
 }
 
+
+bool Decoder::drainVideoFrame(AVFrame *frame)
+{
+    if (!m_codecContextVideo || m_videoStreamIndex) {
+        qDebug() << "Not init context of video or not a index of video";
+        return false;
+    }
+
+    while (m_running.load()) // FRAME LOAD
+    {  
+        int ret = avcodec_receive_frame(m_codecContextVideo, frame);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            return true;
+        if (ret < 0) {
+            char errbuf[AV_ERROR_MAX_STRING_SIZE];
+            av_strerror(ret, errbuf, sizeof(errbuf));
+            qDebug() << "Drain video send: " << errbuf;
+            return false;
+        }
+
+        qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
+
+        if (m_isSeeking.load()) {
+            if (m_preview.exchange(false)) {
+                videoFrame vFrame;
+                vFrame.posMs   = posMs;
+                vFrame.frame   = cloneToSharedPtr(frame);
+                vFrame.preview = true;
+
+                m_frameVQueue.push(vFrame);
+            }
+            if (posMs < m_seekTargetMs.load()) {
+                av_frame_unref(frame);
+                continue;
+            } 
+            m_isSeeking.store(false);
+        }
+
+        videoFrame vFrame;
+        vFrame.posMs = posMs;
+        vFrame.frame = cloneToSharedPtr(frame);
+
+        // Push frame to queue
+        if (!m_frameVQueue.push(vFrame)) {
+            // If queue is full
+            av_frame_unref(frame);
+            return false;
+        }
+        av_frame_unref(frame);
+    }
+    return false;
+}
+
 void Decoder::decodeVideoLoop()
 {
     AVFrame *frame = av_frame_alloc();
 
-    constexpr int64_t durMs = 1000;                // Max queue = 1 sec
+    constexpr int64_t durMs  = 1000;                // Max queue = 1 sec
     constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
     AVPacket *packet;
 
@@ -311,33 +364,8 @@ void Decoder::decodeVideoLoop()
         if (packet == nullptr) {
             std::lock_guard<std::mutex> lock(videoMtx);
 
-            avcodec_send_packet(m_codecContextVideo, packet);
-
-            // Last B-frame
-            while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
-            {  
-                qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
-                if (m_isSeeking.load()) {
-                    if (posMs < m_seekTargetMs.load()) {
-                        av_frame_unref(frame);
-                        continue;
-                    } else {
-                        m_isSeeking.store(false);
-                    }
-                }
-                videoFrame vFrame;
-                vFrame.posMs = posMs;
-                vFrame.frame = cloneToSharedPtr(frame);
-
-                // Push frame to queue
-                if (!m_frameVQueue.push(vFrame)) {
-                    // If queue is full
-                    av_frame_unref(frame);
-                    break;
-                }
-                av_frame_unref(frame);
-            }
-
+            avcodec_send_packet(m_codecContextVideo, nullptr);
+            drainVideoFrame(frame);
             m_frameVQueue.push(videoFrame{});
             break;
         }
@@ -347,46 +375,14 @@ void Decoder::decodeVideoLoop()
 
             int ret = avcodec_send_packet(m_codecContextVideo, packet);
             av_packet_free(&packet);
-
             if (ret < 0) continue;
-
-            while (m_running.load() && avcodec_receive_frame(m_codecContextVideo, frame) == 0) // FRAME LOAD
-            {  
-                qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
-                if (m_isSeeking.load()) {
-                    if (m_preview.exchange(false)) {
-                        videoFrame vFrame;
-                        vFrame.posMs = posMs;
-                        vFrame.frame = cloneToSharedPtr(frame);
-                        vFrame.preview = true;
-                        m_frameVQueue.push(vFrame);
-                    }
-                    if (posMs < m_seekTargetMs.load()) {
-                        qDebug() << "Decoder: Video:" 
-                                 << "posMs:" << posMs << "TargetMs:" << m_seekTargetMs 
-                                 << "Diff:" << posMs - m_seekTargetMs;
-                        av_frame_unref(frame);
-                        continue;
-                    } 
-                    m_isSeeking.store(false);
-                }
-                videoFrame vFrame;
-                vFrame.posMs = posMs;
-                vFrame.frame = cloneToSharedPtr(frame);
-
-                // Push frame to queue
-                if (!m_frameVQueue.push(vFrame)) {
-                    // If queue is full
-                    av_frame_unref(frame);
-                    break;
-                }
-                av_frame_unref(frame);
+            if (!drainVideoFrame(frame)) {
+                qDebug() << "drain video frame send false";
+                // Something..
             }
         }
     }
     av_frame_free(&frame);
-
-    // emit EventBus::instance().decoderFinished();
 }
 
 void Decoder::decodeAudioLoop() // Prototype
