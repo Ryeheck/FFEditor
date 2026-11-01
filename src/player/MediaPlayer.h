@@ -52,10 +52,11 @@ private:
     std::thread m_videoDecodeThread;
     std::thread m_audioDecodeThread;
 
-    AudioOutput *m_audio    = nullptr;
-    Decoder *m_decoder      = nullptr; 
-    QTimer *m_renderTimer   = nullptr;
-    playbackState m_state   = playbackState::Stopped;
+    AudioOutput *m_audio  = nullptr;
+    Decoder *m_decoder    = nullptr; 
+    QTimer *m_renderTimer = nullptr;
+
+    playbackState m_state = playbackState::Stopped;
     
     int m_renderMs = 16;
 };
