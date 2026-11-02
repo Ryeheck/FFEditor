@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QPainterPath>
+#include <qobject.h>
 
 CustomVolume::CustomVolume(QWidget *parent)
     : QWidget(parent)
@@ -66,4 +67,12 @@ void CustomVolume::setValue(int newValue)
         m_value = newValue / 100.0;
         update();
     }   
+}
+
+QString CustomVolume::formatVolume(const float vlm)
+{
+    qint32 percent = (vlm / 1.0f) * 100;
+
+    // Idk how it work
+    return QString("%1%").arg(percent);
 }
