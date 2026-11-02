@@ -59,7 +59,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     stopBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     stopBtn->setIcon(QIcon(":/buttons/stop_24.svg"));
-    stopBtn->setIconSize(QSize(32, 32));
+    stopBtn->setIconSize(QSize(24, 24));
     stopBtn->show();
     
     QToolButton *pauseBtn = new QToolButton(this);
@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     pauseBtn->setIcon(QIcon(":/buttons/resume_24.svg"));
-    pauseBtn->setIconSize(QSize(32, 32));
+    pauseBtn->setIconSize(QSize(24, 24));
     pauseBtn->show();
     
     // Panel Tools (start, stop, ...) buttons
