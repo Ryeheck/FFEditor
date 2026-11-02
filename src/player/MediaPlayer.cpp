@@ -114,9 +114,8 @@ void MediaPlayer::cleanupAudio()
     if (m_audio) {
         m_audio->uninit();
         m_audio->deleteLater();
-        m_audio = nullptr;
     }
-
+    m_audio = nullptr;
     // m_state
 }   
 
@@ -143,7 +142,6 @@ bool MediaPlayer::initAudio(int channels)
 void MediaPlayer::stopPlayback()
 {
     if (m_renderTimer)  m_renderTimer->stop();
-
     if (m_decoder)      m_decoder->stop();
 
     if (m_demuxThread.joinable())       m_demuxThread.join();
@@ -222,6 +220,15 @@ void MediaPlayer::stop()
         m_audio->uninit();
     
     cleanupDecoder();
+    cleanupAudio();
+}
+
+void MediaPlayer::playPause()
+{
+    if (m_state == playbackState::Playing)
+        pause();
+    else if (m_state == playbackState::Paused)
+        play();
 }
 
 void MediaPlayer::pause() 
@@ -229,6 +236,10 @@ void MediaPlayer::pause()
     if (m_state == playbackState::Paused) return;
     m_state = playbackState::Paused;
 
+    if (m_renderTimer)
+        m_renderTimer->stop();
+    if (m_audio)
+        m_audio->stop();
 }
 
 
