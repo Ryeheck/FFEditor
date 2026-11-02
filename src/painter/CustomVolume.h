@@ -2,6 +2,7 @@
 #define CUSTOMVOlUME_H
 
 #include <QWidget>
+#include <qobject.h>
 
 class CustomVolume : public QWidget
 {
@@ -14,6 +15,7 @@ public:
     
     void setValue(int value);
     int value() const {  return m_value;  };
+    QString formatVolume(float vlm);
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
