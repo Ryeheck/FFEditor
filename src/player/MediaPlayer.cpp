@@ -82,16 +82,16 @@ void MediaPlayer::processNextFrame()
 
 void MediaPlayer::cleanupDecoder()
 {
-    if (m_state == playbackState::Stopped) return;
-    if (m_renderTimer)  m_renderTimer->stop();
-    
+    clear();
+
     if (m_decoder) {
-        m_decoder->clear();
+        if (m_demuxThread.joinable())       m_demuxThread.join();
+        if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+        if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+        
         m_decoder->deleteLater();
     }
     m_decoder = nullptr;
-
-    m_state = playbackState::Stopped;
 }
 
 bool MediaPlayer::initDecoder()
@@ -110,7 +110,6 @@ void MediaPlayer::cleanupAudio()
         m_audio->deleteLater();
     }
     m_audio = nullptr;
-
     // m_state
 }   
 
@@ -134,38 +133,47 @@ bool MediaPlayer::initAudio(int channels)
     return true;
 }
 
-void MediaPlayer::stopPlayback()
+void MediaPlayer::stop()
 {
+    if (m_state == playbackState::Stopped)  return;
+
     if (m_renderTimer)  m_renderTimer->stop();
+    if (m_audio)        m_audio->stop();
     if (m_decoder)      m_decoder->stop();
 
-    if (m_demuxThread.joinable())       m_demuxThread.join();
-    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
-    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
-        
-    if (m_audio) {  m_audio->stop();  m_audio->uninit();  }
-    if (m_decoder)  m_decoder->clear();
 
     m_state = playbackState::Stopped;
 }
 
+void MediaPlayer::clear()
+{
+    stop();
+
+    if (m_audio)  
+        m_audio->reset();
+    if (m_decoder) {
+        m_decoder->clear();
+        m_decoder->reset();
+    }
+}
+
 bool MediaPlayer::loadVideo(const QString &path) 
-{  
-    stopPlayback();
+{
+    cleanupAudio();
+    cleanupDecoder();
 
     if (!m_decoder) {
         if (!initDecoder())  return false;
-    } else {
-        m_decoder->reset();
     }
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
-        stop();
+        clear();
         return false;
     }
 
-    if (!initAudio())  return false;
+    if (!m_audio)
+        if (!initAudio())  return false;
     
     m_decoder->notify();
     
@@ -204,29 +212,12 @@ void MediaPlayer::play()
     }
 }
 
-void MediaPlayer::stop()
+void MediaPlayer::playPause()
 {
-    if (m_state == playbackState::Stopped) return;
-    m_state = playbackState::Stopped;
-
-    if (m_renderTimer) {
-        m_renderTimer->stop();
-        qDebug() << "Core: Timer stop...";
-    }
-    if (m_audio) {
-        m_audio->stop();
-        qDebug() << "Core: Audio stop...";
-    }
-    if (m_decoder) {
-        m_decoder->stop();
-        qDebug() << "Core: Decoder stop...";
-    }
-
-    if (m_demuxThread.joinable())       m_demuxThread.join();
-    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
-    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
-
-    cleanupDecoder();
+    if (m_state == playbackState::Playing)
+        pause();
+    else if (m_state == playbackState::Paused)
+        play();
 }
 
 void MediaPlayer::pause() 
@@ -234,6 +225,10 @@ void MediaPlayer::pause()
     if (m_state == playbackState::Paused) return;
     m_state = playbackState::Paused;
 
+    if (m_renderTimer)
+        m_renderTimer->stop();
+    if (m_audio)
+        m_audio->stop();
 }
 
 
