@@ -34,7 +34,7 @@ public:
     void play();
     void stop();
     void playPause();
-    
+    void clear();
 public slots:
     
 
@@ -42,7 +42,6 @@ private slots:
 
 
 private:
-    void stopPlayback();
     bool initAudio(int channels = 2);
     bool initDecoder();
     void cleanupDecoder();
