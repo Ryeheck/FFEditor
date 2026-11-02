@@ -152,6 +152,10 @@ void MediaPlayer::clear()
     if (m_audio)  
         m_audio->reset();
     if (m_decoder) {
+        if (m_demuxThread.joinable())       m_demuxThread.join();
+        if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+        if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+
         m_decoder->clear();
         m_decoder->reset();
     }
@@ -159,12 +163,11 @@ void MediaPlayer::clear()
 
 bool MediaPlayer::loadVideo(const QString &path) 
 {
-    cleanupAudio();
     cleanupDecoder();
+    cleanupAudio();
 
-    if (!m_decoder) {
+    if (!m_decoder)
         if (!initDecoder())  return false;
-    }
 
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
@@ -189,13 +192,6 @@ void MediaPlayer::play()
     if (m_state == playbackState::Playing) return;
     m_state = playbackState::Playing;
 
-    if (m_audio) {
-        qDebug() << "Core: Audio start..";
-        m_audio->start();        
-    } else {
-        qDebug() << "Core: Audio not init";
-        // int ret = initAudio();
-    }
     if (!m_decoder) {
         qDebug() << "Core: Decoder not init";
         // int ret = initDecoder();
@@ -209,6 +205,13 @@ void MediaPlayer::play()
         qDebug() << "Core: Timer not init";
         // int ret = initTimer();
         return;
+    }
+    if (m_audio) {
+        qDebug() << "Core: Audio start..";
+        m_audio->start();        
+    } else {
+        qDebug() << "Core: Audio not init";
+        // int ret = initAudio();
     }
 }
 
@@ -234,13 +237,7 @@ void MediaPlayer::pause()
 
 MediaPlayer::~MediaPlayer()
 {
-    if (m_renderTimer)  m_renderTimer->stop();
-    if (m_decoder)      m_decoder->stop();
-    if (m_audio)        m_audio->stop();
-
-    if (m_demuxThread.joinable())       m_demuxThread.join();
-    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
-    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+    clear();
     
     cleanupAudio();
     cleanupDecoder();
