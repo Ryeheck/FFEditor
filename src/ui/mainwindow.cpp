@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
 
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    startBtn->setIcon(QIcon(":/icons/iconStart2.png"));
+    startBtn->setIcon(QIcon(":/buttons/play_24.svg"));
     startBtn->setIconSize(QSize(32, 32));
     startBtn->show();
     
@@ -58,7 +58,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(stopBtn, &QToolButton::clicked, player, &MediaPlayer::stop);
     
     stopBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    stopBtn->setIcon(QIcon(/* Icon */));
+    stopBtn->setIcon(QIcon(":/buttons/stop_24.svg"));
     stopBtn->setIconSize(QSize(32, 32));
     stopBtn->show();
     
@@ -66,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::playPause);
 
     pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    pauseBtn->setIcon(QIcon(/* Icon */));
+    pauseBtn->setIcon(QIcon(":/buttons/resume_24.svg"));
     pauseBtn->setIconSize(QSize(32, 32));
     pauseBtn->show();
     
