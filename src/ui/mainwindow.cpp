@@ -23,14 +23,13 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     centralWidget = new QWidget(this);
-    MainLayout = new QVBoxLayout(centralWidget);
+    MainLayout    = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
 
     MainLayout->setContentsMargins(0, 0, 0, 0);
     MainLayout->addSpacing(0);
 
-    player = new MediaPlayer(this);
-    
+    player      = new MediaPlayer(this);
     videoWidget = new VideoWidget(this);
 
     MainLayout->addWidget(videoWidget, 1);
@@ -143,5 +142,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 MainWindow::~MainWindow()
 {
+    if (player) {
+        player->stop();
+    }
+    
+    
     qDebug() << "MainWindow destroy";
 }

@@ -20,7 +20,7 @@ template <typename T>
 class FrameQueue
 {
 public:
-    using dtsExtractor = std::function<int64_t(const T &)>;
+    using dtsExtractor  = std::function<int64_t(const T &)>;
     using sizeExtractor = std::function<int64_t(const T &)>;
 
     explicit FrameQueue() {}
@@ -146,7 +146,7 @@ public:
 
         m_abort = true;
         m_condNotEmpty.wakeAll();
-        m_condNotFull.wakeAll();
+        m_condNotFull .wakeAll();
     }
 
 private:
@@ -161,7 +161,7 @@ private:
         m_duration   = 0;
         m_totalBytes = 0;
         m_condNotEmpty.wakeAll();
-        m_condNotFull.wakeAll();
+        m_condNotFull .wakeAll();
     }
 
     void updateDurationLocked()
@@ -201,10 +201,12 @@ private:
     dtsExtractor m_dtsExtract   = nullptr;
     sizeExtractor m_sizeExtract = nullptr;
 
+    bool m_abort = false;
+
     AVRational m_timeBase{1, 1000};
+
     int64_t m_totalBytes = 0;
     int64_t m_duration   = 0;
-    bool m_abort         = false;
 };
 
 #endif // FRAMEQUEUE_HPP

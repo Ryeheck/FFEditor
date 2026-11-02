@@ -35,6 +35,8 @@ void MediaPlayer::processNextFrame()
         stop();
         return;
     }
+
+    // Preview
     if (vFrame.preview) {
         qDebug() << "Its preview!";
         m_decoder->getNextVFrame(vFrame);
@@ -43,7 +45,7 @@ void MediaPlayer::processNextFrame()
     }
 
     qint64 aPosMs = m_audio ? m_audio->getAudioClockMs() : vFrame.posMs;
-    int diffMs = vFrame.posMs - aPosMs;
+    int diffMs    = vFrame.posMs - aPosMs;
     
     /* Range [-50 ; 20] ms */
     // Videoframe is 50 ms behind
@@ -94,7 +96,7 @@ void MediaPlayer::cleanupDecoder()
 
 bool MediaPlayer::initDecoder()
 {
-    m_decoder = new Decoder();
+    m_decoder = new Decoder(this);
     
     return true;
 }
@@ -113,7 +115,7 @@ void MediaPlayer::cleanupAudio()
 
 bool MediaPlayer::initAudio(int channels)
 {
-    m_audio = new AudioOutput();
+    m_audio = new AudioOutput(this);
 
     if (!m_decoder) {
         qDebug() << "Core: Decoder not init";
@@ -232,10 +234,16 @@ void MediaPlayer::pause()
 
 MediaPlayer::~MediaPlayer()
 {
+    if (m_renderTimer)  m_renderTimer->stop();
+    if (m_decoder)      m_decoder->stop();
+    if (m_audio)        m_audio->stop();
+
+    if (m_demuxThread.joinable())       m_demuxThread.join();
+    if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
+    if (m_audioDecodeThread.joinable()) m_audioDecodeThread.join();
+    
+    cleanupAudio();
     cleanupDecoder();
-
-    if (m_renderTimer)
-        m_renderTimer->deleteLater();
-
+    
     qDebug() << "MediaPlayer destroy";
 }

@@ -19,6 +19,11 @@ CustomVolume::CustomVolume(QWidget *parent)
 
 }
 
+CustomVolume::~CustomVolume()
+{
+    qDebug() << "CustomVolume destroy";
+}
+
 void CustomVolume::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
