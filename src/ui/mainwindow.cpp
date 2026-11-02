@@ -64,7 +64,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     stopBtn->show();
     
     QToolButton *pauseBtn = new QToolButton(this);
-    connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::pause);
+    connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::returnandpause);
 
     pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     pauseBtn->setIcon(QIcon(/* Icon */));
