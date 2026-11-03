@@ -7,15 +7,16 @@
 class CustomVolume : public QWidget
 {
     Q_OBJECT
-    float m_value = 0.0f;
+    float m_volume = 0.0f;
 
 public:
     CustomVolume(QWidget *parent = nullptr);
     ~CustomVolume() override;
     
-    void setValue(int value);
-    int value() const {  return m_value;  };
+    void setVolume(int value);
+    int volume() const {  return m_volume;  };
     QString formatVolume(float vlm);
+    
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
