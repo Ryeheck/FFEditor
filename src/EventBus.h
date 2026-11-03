@@ -12,6 +12,7 @@ class EventBus : public QObject
 
 private:
     EventBus() = default;
+    std::atomic<float> m_volume{0.0f};
 
 public:
     static EventBus& instance()
@@ -20,8 +21,18 @@ public:
         return bus;
     }
 
+    float volume() const {  return m_volume.load();  };
+
     EventBus(const EventBus &) = delete;
     EventBus operator=(const EventBus &) = delete;
+
+public slots:
+    void setVolume(float value)
+    {
+        m_volume.store(value);
+        
+        emit volumeChanged(value);
+    }
 
 signals:
     void seekRequested(qint64 posMs);

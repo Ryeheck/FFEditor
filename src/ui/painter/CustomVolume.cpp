@@ -1,5 +1,5 @@
 #include "CustomVolume.h"
-#include "../EventBus.h"
+#include "../../EventBus.h"
 
 #include <QWidget>
 #include <QPainter>
@@ -40,12 +40,12 @@ void CustomVolume::paintEvent(QPaintEvent *event)
     painter.drawPath(triangle);
 
     // Progress bar
-    float barWidth = width() * m_value;
+    float barWidth = width() * m_volume;
     
     QPainterPath ProgressBar;
     ProgressBar.moveTo(0, height());
     ProgressBar.lineTo(barWidth, height());
-    ProgressBar.lineTo(barWidth, height() * (1.0 - m_value));
+    ProgressBar.lineTo(barWidth, height() * (1.0 - m_volume));
     ProgressBar.closeSubpath();
 
     painter.fillPath(ProgressBar, Qt::blue);
@@ -55,16 +55,18 @@ void CustomVolume::paintEvent(QPaintEvent *event)
 void CustomVolume::mouseMoveEvent(QMouseEvent *event)
 {
     float newValue = event->pos().x() / (float)width();
-    m_value = qBound(0.0, newValue, 1.0);
+    m_volume = qBound(0.0, newValue, 1.0);
 
+    emit EventBus::instance().setVolume(m_volume);
     update();
-    emit EventBus::instance().volumeChanged(m_value);
 }
 
-void CustomVolume::setValue(int newValue)
+void CustomVolume::setVolume(int value)
 {
-    if(newValue > -1 && newValue < 101) {
-        m_value = newValue / 100.0;
+    if(value > -1 && value < 101) {
+        m_volume = value / 100.0;
+
+        emit EventBus::instance().setVolume(m_volume);
         update();
     }   
 }
@@ -73,6 +75,6 @@ QString CustomVolume::formatVolume(const float vlm)
 {
     qint32 percent = (vlm / 1.0f) * 100;
 
-    // Idk how it work
+    // Idk how this works
     return QString("%1%").arg(percent);
 }

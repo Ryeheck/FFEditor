@@ -1,13 +1,14 @@
 #ifndef CUSTOMPLAYHEAD_H
 #define CUSTOMPLAYHEAD_H
 
+#include "../../EventBus.h"
+
 #include <QWidget>
 #include <QPainter>
 #include <QMouseEvent>
 #include <QPainterPath>
 #include <qtypes.h>
 
-#include "../EventBus.h"
 
 class CustomPlayhead : public QWidget
 {
