@@ -19,7 +19,7 @@ AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
     connect(&EventBus::instance(), &EventBus::durationChanged, this, &AudioOutput::setDuration);
     connect(&EventBus::instance(), &EventBus::positionAudioChanged, this, &AudioOutput::seekTo);
 
-    setVolume(0.2);
+    setVolume(0.5f);
 }
 
 AudioOutput::~AudioOutput()
@@ -52,6 +52,7 @@ bool AudioOutput::init(Decoder *decoder, uint64_t sampleRate, int channels)
     }
 
     m_init = true;
+    setVolume(EventBus::instance().volume());
 
     return true;
 }
