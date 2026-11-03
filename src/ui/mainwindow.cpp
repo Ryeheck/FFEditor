@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "MediaLoader.h"
-#include "../painter/CustomVolume.h"
-#include "../painter/CustomPlayhead.hpp"
+#include "painter/CustomVolume.h"
+#include "painter/CustomPlayhead.hpp"
 #include "../player/MediaPlayer.h"
 #include "../player/VideoWidget.h"
 #include "../EventBus.h"
@@ -79,7 +79,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Volume songs
     volumeSlider = new CustomVolume(this);
-    volumeSlider->setValue(50);
+    volumeSlider->setVolume(50);
     
     // Percent (volume)
     QLabel *vlmLabel = new QLabel("50%", this);

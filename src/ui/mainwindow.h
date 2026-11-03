@@ -2,8 +2,8 @@
 #define MAINWINDOW_H
 
 #include "MediaLoader.h"
-#include "../painter/CustomVolume.h"
-#include "../painter/CustomPlayhead.hpp"
+#include "painter/CustomVolume.h"
+#include "painter/CustomPlayhead.hpp"
 #include "../player/MediaPlayer.h"
 #include "../player/VideoWidget.h"
 
