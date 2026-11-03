@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
 
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    startBtn->setIcon(QIcon(":/icons/iconStart2.png"));
+    startBtn->setIcon(QIcon(":/buttons/play_24.svg"));
     startBtn->setIconSize(QSize(32, 32));
     startBtn->show();
     
@@ -58,16 +58,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(stopBtn, &QToolButton::clicked, player, &MediaPlayer::stop);
     
     stopBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    stopBtn->setIcon(QIcon(/* Icon */));
-    stopBtn->setIconSize(QSize(32, 32));
+    stopBtn->setIcon(QIcon(":/buttons/stop_24.svg"));
+    stopBtn->setIconSize(QSize(24, 24));
     stopBtn->show();
     
     QToolButton *pauseBtn = new QToolButton(this);
     connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::playPause);
 
     pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    pauseBtn->setIcon(QIcon(/* Icon */));
-    pauseBtn->setIconSize(QSize(32, 32));
+    pauseBtn->setIcon(QIcon(":/buttons/resume_24.svg"));
+    pauseBtn->setIconSize(QSize(24, 24));
     pauseBtn->show();
     
     // Panel Tools (start, stop, ...) buttons
@@ -79,7 +79,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Volume songs
     volumeSlider = new CustomVolume(this);
-    volumeSlider->setValue(10);
+    volumeSlider->setValue(50);
+    
+    // Percent (volume)
+    QLabel *vlmLabel = new QLabel("50%", this);
+    connect(&EventBus::instance(), &EventBus::volumeChanged, this, [this, vlmLabel] (const float vlm) {
+        vlmLabel->setText(QString("%1").arg(volumeSlider->formatVolume(vlm)));
+    });
+
+    pnToolslLayout->addWidget(vlmLabel);
     pnToolslLayout->addWidget(volumeSlider);
     
     // Playhead

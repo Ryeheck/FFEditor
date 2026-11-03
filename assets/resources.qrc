@@ -1,8 +1,8 @@
 <RCC version="1.0">
     <qresource prefix="/">
-        <file alias="icons/iconStart2.png">icons/iconStart2.png</file>
-        <file alias="icons/iconStart.png">icons/iconStart.png</file>
-        <file alias="icons/iconStart3.png">icons/iconStart3.png</file>
+        <file alias="buttons/stop_24.svg">icons/stop_24.svg</file>
+        <file alias="buttons/resume_24.svg">icons/resume_24.svg</file>
+        <file alias="buttons/play_24.svg">icons/play_24.svg</file>
         <file alias="shaders/vertex.vert">shaders/vertex.vert</file>
         <file alias="shaders/fragment.frag">shaders/fragment.frag</file>
     </qresource>
