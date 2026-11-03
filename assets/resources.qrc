@@ -3,5 +3,7 @@
         <file alias="buttons/stop_24.svg">icons/stop_24.svg</file>
         <file alias="buttons/resume_24.svg">icons/resume_24.svg</file>
         <file alias="buttons/play_24.svg">icons/play_24.svg</file>
+        <file alias="shaders/vertex.vert">shaders/vertex.vert</file>
+        <file alias="shaders/fragment.frag">shaders/fragment.frag</file>
     </qresource>
 </RCC>
