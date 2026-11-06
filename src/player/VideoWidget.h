@@ -6,9 +6,8 @@
 #include <QWidget>
 #include <QImage>
 #include <QPainter>
-#include <libavutil/frame.h>
 #include <qimage.h>
-#include <qopenglfunctions.h>
+#include <qopenglfunctions_3_3_core.h>
 #include <qopengltexture.h>
 #include <qopenglvertexarrayobject.h>
 #include <qopenglwidget.h>
@@ -18,10 +17,11 @@
 #include <QOpenGLVertexArrayObject>
 
 extern "C" {
+#include <libavutil/frame.h>
 #include <libswscale/swscale.h>
 }
 
-class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions
+class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 {
     Q_OBJECT
 
