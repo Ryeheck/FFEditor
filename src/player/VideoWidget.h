@@ -41,6 +41,8 @@ protected:
 private:
     QImage renderFrame(AVFrame *frame);
     QOpenGLTexture *setTexture(int width = 1920, int height = 1080);
+    void createTextures(int width, int height);
+    void uploadFrame();
     void cleanupGL();
     
     SwsContext *m_swsCtx = nullptr;
@@ -51,6 +53,10 @@ private:
     QImage m_currentFrame;
 
     // OpenGL
+    QOpenGLTexture *m_tex[3] = {nullptr, nullptr, nullptr};
+    AVFramePtr m_frame;
+    bool m_newFrame = false;
+
     QOpenGLBuffer            m_VertexBuf;
     QOpenGLVertexArrayObject m_vao;
     

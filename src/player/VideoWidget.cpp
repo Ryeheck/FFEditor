@@ -6,6 +6,8 @@
 #include <QWidget>
 #include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLWidget>
+#include <qopengltexture.h>
+#include <QOpenGLPixelTransferOptions>
 
 extern "C" {
 #include <libavutil/pixfmt.h>
@@ -22,21 +24,44 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
 {
     if (!vFrame)  return;
     
-    m_currentFrame = renderFrame(vFrame.get());
-
-    if (!m_texture) {
-        m_texture = setTexture(vFrame->width, vFrame->height);
-    }
-    if (m_texture->width()  != vFrame->width || 
-        m_texture->height() != vFrame->height) {
-        delete m_texture;
-
-        m_texture = setTexture(vFrame->width, vFrame->height);
-    }
+    m_frame = vFrame;
+    m_newFrame = true;
 
     update();
 }
 
+void VideoWidget::createTextures(int w, int h)
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        delete m_tex[i];
+
+        int pw = (i == 0) ? w : (w + 1) / 2;
+        int ph = (i == 0) ? h : (h + 1) / 2;
+
+        m_tex[i] = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        m_tex[i]->setSize(pw, ph);
+        m_tex[i]->setFormat(QOpenGLTexture::R8_UNorm);
+        m_tex[i]->setMinificationFilter(QOpenGLTexture::Linear);
+        m_tex[i]->setMagnificationFilter(QOpenGLTexture::Linear);
+        m_tex[i]->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+        m_tex[i]->allocateStorage();
+    }
+}
+
+void VideoWidget::uploadFrame()
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        QOpenGLPixelTransferOptions opt;
+        opt.setAlignment(1);
+        opt.setRowLength(m_frame->linesize[i]);
+
+        m_tex[i]->setData(QOpenGLTexture::Red, QOpenGLTexture::UInt8, 
+                          m_frame->data[i], &opt);
+    }
+}
 
 QOpenGLTexture *VideoWidget::setTexture(int width, int height)
 {
@@ -156,24 +181,30 @@ void VideoWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (!m_texture) {
-        qDebug() << "Texture is NULL";
-        return;
-    }
-    if (m_currentFrame.isNull()) {
-        qDebug() << "QImage is NULL";
+    if (!m_frame) {
+        qDebug() << "OpenGL hasn't frame";
         return;
     }
 
-    m_texture->setData(QOpenGLTexture::RGB, QOpenGLTexture::UInt8, m_currentFrame.bits());
+    if (m_newFrame) {
+        if (!m_tex[0] || m_tex[0]->width() != m_frame->width 
+                      || m_tex[0]->height() != m_frame->height)
+            createTextures(m_frame->width, m_frame->height);
+        
+        uploadFrame();
+        m_newFrame = false;
+    }
 
     m_program->bind();
-    m_texture->bind(0);
-    m_program->setUniformValue("vTex", 0);
+    for (int i = 0; i < 3; ++i)
+        m_tex[i]->bind(i);
+
+    m_program->setUniformValue("texY", 0);
+    m_program->setUniformValue("texU", 1);
+    m_program->setUniformValue("texV", 2);
 
     m_vao.bind();
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    
     m_vao.release();
 }
 
@@ -183,6 +214,11 @@ void VideoWidget::cleanupGL()
 
     delete m_texture;  m_texture = nullptr;
     delete m_program;  m_program = nullptr;
+
+    for (int i = 0; i < 3; ++i) 
+    {
+        delete m_tex[i]; m_tex[i] = nullptr;
+    }
 
     m_vao.destroy();
     m_VertexBuf.destroy();
