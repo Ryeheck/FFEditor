@@ -4,12 +4,11 @@
 #include <QImage>
 #include <QPainter>
 #include <QWidget>
-#include <QOpenGLFunctions>
+#include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLWidget>
-#include <libavutil/pixfmt.h>
-#include <qopengltexture.h>
 
 extern "C" {
+#include <libavutil/pixfmt.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/mem.h>
@@ -97,7 +96,8 @@ QImage VideoWidget::renderFrame(AVFrame *frame)
 void VideoWidget::initializeGL()
 {
     initializeOpenGLFunctions();
-
+    glClearColor(0, 1, 0, 0);
+    
     m_program = new QOpenGLShaderProgram(this);
 
     if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vertex.vert")) {
@@ -154,7 +154,6 @@ void VideoWidget::resizeGL(int w, int h)
 
 void VideoWidget::paintGL() 
 {
-    glClearColor(0, 1, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (!m_texture) {
