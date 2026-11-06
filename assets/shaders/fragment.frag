@@ -3,9 +3,12 @@
 in vec2 TexCoord;
 out vec4 FragColor;
 
-uniform sampler2D vTex;
+uniform sampler2D texY;
+uniform sampler2D texU;
+uniform sampler2D texV;
 
 void main() {
-   FragColor = texture(vTex, TexCoord);
-   // FragColor = vec4(TexCoord, 0.0, 1.0);
+   float y = texture(texY, TexCoord).r;
+
+   FragColor = vec4(y, y, y, 1.0);
 }
