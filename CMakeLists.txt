@@ -29,6 +29,8 @@ FetchContent_Declare(
     miniaudio
     GIT_REPOSITORY "https://github.com/mackron/miniaudio.git"
     GIT_TAG        "0.11.25"
+    GIT_SHALLOW    TRUE
+    GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(miniaudio)
 
