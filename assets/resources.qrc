@@ -5,5 +5,8 @@
         <file alias="buttons/play_24.svg">icons/play_24.svg</file>
         <file alias="shaders/vertex.vert">shaders/vertex.vert</file>
         <file alias="shaders/fragment.frag">shaders/fragment.frag</file>
+        <file alias="volume/volumeDown.svg">icons/volumeDown.svg</file>
+        <file alias="volume/volumeMute.svg">icons/volumeMute.svg</file>
+        <file alias="volume/volumeUp.svg">icons/volumeUp.svg</file>
     </qresource>
 </RCC>
