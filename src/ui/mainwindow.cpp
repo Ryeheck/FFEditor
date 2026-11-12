@@ -82,12 +82,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Volume songs
     volumeSlider = new CustomVolume(this);
     volumeSlider->setVolume(50);
-    
-    // Percent (volume)
-    QLabel *vlmLblPercent = new QLabel("50%", this);
-    connect(&EventBus::instance(), &EventBus::volumeChanged, this, [this, vlmLblPercent] (const float vlm) {
-        vlmLblPercent->setText(QString("%1").arg(volumeSlider->formatVolume(vlm)));
-    });
 
     // Icons (volume)
     QLabel *vlmLblIcon = new QLabel(this);
@@ -99,7 +93,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     });
     
     pnToolslLayout->addWidget(vlmLblIcon);
-    pnToolslLayout->addWidget(vlmLblPercent);
     pnToolslLayout->addWidget(volumeSlider);
     
     // Playhead
