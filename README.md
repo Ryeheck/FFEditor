@@ -67,6 +67,9 @@ cmake --build build
 ./build/FFEditor
 ```
 
+## License
+MIT, see [LICENSE](LICENSE)
+
 ## Feedback
 
 Found a bug or have an idea? Open an [issue](https://github.com/Ryeheck/FFEditor/issues).
