@@ -15,8 +15,10 @@
 #include <QUrl>
 #include <QToolButton>
 #include <qboxlayout.h>
+#include <qicon.h>
 #include <qlabel.h>
 #include <qobject.h>
+#include <qpushbutton.h>
 #include <qtypes.h>
 #include <qwidget.h>
 
@@ -80,14 +82,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Volume songs
     volumeSlider = new CustomVolume(this);
     volumeSlider->setVolume(50);
-    
-    // Percent (volume)
-    QLabel *vlmLabel = new QLabel("50%", this);
-    connect(&EventBus::instance(), &EventBus::volumeChanged, this, [this, vlmLabel] (const float vlm) {
-        vlmLabel->setText(QString("%1").arg(volumeSlider->formatVolume(vlm)));
-    });
 
-    pnToolslLayout->addWidget(vlmLabel);
+    // Icons (volume)
+    QLabel *vlmLblIcon = new QLabel(this);
+    vlmLblIcon->setPixmap(QIcon(":/volume/volumeUp.svg").pixmap(20, 20));
+    connect(&EventBus::instance(), &EventBus::volumeChanged, this, [this, vlmLblIcon] (const float vlm) {
+        if      (vlm == 0)  vlmLblIcon->setPixmap(QIcon(":/volume/volumeMute.svg").pixmap(20, 20));
+        else if (vlm > 0.5) vlmLblIcon->setPixmap(QIcon(":/volume/volumeUp.svg")  .pixmap(20, 20));
+        else if (vlm < 0.5) vlmLblIcon->setPixmap(QIcon(":/volume/volumeDown.svg").pixmap(20, 20));
+    });
+    
+    pnToolslLayout->addWidget(vlmLblIcon);
     pnToolslLayout->addWidget(volumeSlider);
     
     // Playhead

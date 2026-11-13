@@ -29,7 +29,11 @@ void CustomVolume::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    
+
+    QRect rect(0, 0, width(), height());
+    painter.drawText(rect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, 
+                     formatVolume(m_volume));
+
     QPainterPath triangle;
     triangle.moveTo(0, height());       // Bottom left corner
     triangle.lineTo(width(), height()); // Bottom right corner
