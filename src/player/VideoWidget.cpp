@@ -132,7 +132,6 @@ void VideoWidget::paintGL()
         qDebug() << "OpenGL hasn't frame";
         return;
     }
-
     if (m_newFrame) {
         if (!m_tex[0] || m_tex[0]->width() != m_frame->width 
                       || m_tex[0]->height() != m_frame->height)
@@ -142,6 +141,25 @@ void VideoWidget::paintGL()
         m_newFrame = false;
     }
 
+    // Window margins
+    int w = int(width()  * devicePixelRatioF());
+    int h = int(height() * devicePixelRatioF());
+
+    float videoAcpect = float(m_frame->width) / m_frame->height; 
+    float winAscpect  = float(w) / h;
+
+    int vw; int vh;
+    if (videoAcpect > winAscpect) {
+        vw = w;
+        vh = int(w / videoAcpect);
+    } else {
+        vh = h;
+        vw = int(h * videoAcpect);
+    }
+ 
+    glViewport((w - vw) / 2, (h - vh) / 2, vw, vh);
+
+    // Frame
     m_program->bind();
     for (int i = 0; i < 3; ++i)
         m_tex[i]->bind(i);
