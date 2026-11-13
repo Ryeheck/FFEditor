@@ -3,12 +3,7 @@
 
 #include "Decoder.h"
 
-#include <QWidget>
-#include <QImage>
-#include <QPainter>
-#include <libavutil/frame.h>
-#include <qimage.h>
-#include <qopenglfunctions.h>
+#include <qopenglfunctions_3_3_core.h>
 #include <qopengltexture.h>
 #include <qopenglvertexarrayobject.h>
 #include <qopenglwidget.h>
@@ -17,11 +12,7 @@
 #include <QOpenGLTexture>
 #include <QOpenGLVertexArrayObject>
 
-extern "C" {
-#include <libswscale/swscale.h>
-}
-
-class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions
+class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 {
     Q_OBJECT
 
@@ -39,18 +30,16 @@ protected:
     
 
 private:
-    QImage renderFrame(AVFrame *frame);
     QOpenGLTexture *setTexture(int width = 1920, int height = 1080);
+    void createTextures(int width, int height);
+    void uploadFrame();
     void cleanupGL();
     
-    SwsContext *m_swsCtx = nullptr;
-    uint8_t *m_buffer    = nullptr;
-
-    int m_bufferLinesize = 0;
-    
-    QImage m_currentFrame;
-
     // OpenGL
+    QOpenGLTexture *m_tex[3] = {nullptr, nullptr, nullptr};
+    AVFramePtr m_frame;
+    bool m_newFrame = false;
+
     QOpenGLBuffer            m_VertexBuf;
     QOpenGLVertexArrayObject m_vao;
     

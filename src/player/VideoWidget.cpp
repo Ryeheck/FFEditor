@@ -1,19 +1,11 @@
 #include "VideoWidget.h"
 #include "../EventBus.h"
 
-#include <QImage>
-#include <QPainter>
 #include <QWidget>
-#include <QOpenGLFunctions>
+#include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLWidget>
-#include <libavutil/pixfmt.h>
 #include <qopengltexture.h>
-
-extern "C" {
-#include <libswscale/swscale.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
-}
+#include <QOpenGLPixelTransferOptions>
 
 VideoWidget::VideoWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
@@ -23,21 +15,44 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
 {
     if (!vFrame)  return;
     
-    m_currentFrame = renderFrame(vFrame.get());
-
-    if (!m_texture) {
-        m_texture = m_texture = setTexture(vFrame->width, vFrame->height);
-    }
-    if (m_texture->width()  != vFrame->width || 
-        m_texture->height() != vFrame->height) {
-        delete m_texture;
-
-        m_texture = setTexture(vFrame->width, vFrame->height);
-    }
+    m_frame = vFrame;
+    m_newFrame = true;
 
     update();
 }
 
+void VideoWidget::createTextures(int w, int h)
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        delete m_tex[i];
+
+        int pw = (i == 0) ? w : (w + 1) / 2;
+        int ph = (i == 0) ? h : (h + 1) / 2;
+
+        m_tex[i] = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        m_tex[i]->setSize(pw, ph);
+        m_tex[i]->setFormat(QOpenGLTexture::R8_UNorm);
+        m_tex[i]->setMinificationFilter(QOpenGLTexture::Linear);
+        m_tex[i]->setMagnificationFilter(QOpenGLTexture::Linear);
+        m_tex[i]->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+        m_tex[i]->allocateStorage();
+    }
+}
+
+void VideoWidget::uploadFrame()
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        QOpenGLPixelTransferOptions opt;
+        opt.setAlignment(1);
+        opt.setRowLength(m_frame->linesize[i]);
+
+        m_tex[i]->setData(QOpenGLTexture::Red, QOpenGLTexture::UInt8, 
+                          m_frame->data[i], &opt);
+    }
+}
 
 QOpenGLTexture *VideoWidget::setTexture(int width, int height)
 {
@@ -52,52 +67,11 @@ QOpenGLTexture *VideoWidget::setTexture(int width, int height)
     return texture;
 }
 
-QImage VideoWidget::renderFrame(AVFrame *frame)
-{
-    int align = 32;
-    int requestedSize = av_image_get_buffer_size(AV_PIX_FMT_RGB24, 
-                                                 frame->width, frame->height, 
-                                                 align);
-
-    if (!m_buffer || requestedSize > m_bufferLinesize) {
-        if (m_buffer)  av_free(m_buffer);
-        
-        m_bufferLinesize = requestedSize;
-        m_buffer = (uint8_t *)av_malloc(m_bufferLinesize);
-    }
-    
-    m_swsCtx = sws_getCachedContext(
-        m_swsCtx, 
-        frame->width, frame->height, (AVPixelFormat)frame->format,
-        frame->width, frame->height, AV_PIX_FMT_RGB24,
-        SWS_BICUBIC, NULL, NULL, NULL
-    );
-
-    if (!m_swsCtx) {
-        qDebug() << "Failed to create sws context";
-        return QImage();
-    }
-
-    uint8_t *dest[4]    = {m_buffer, nullptr, nullptr, nullptr};
-    int linesize        = FFALIGN(frame->width * 3, align);
-    int destLinesize[4] = {linesize, 0, 0, 0}; // 3 bytes + align for pixel
-
-    if (sws_scale(m_swsCtx, frame->data, frame->linesize, 
-                  0, frame->height, dest, destLinesize) 
-                  != frame->height) {
-        qDebug() << "Error changing frame color range";
-        return QImage();
-    }
-
-    return QImage(m_buffer, frame->width, frame->height, 
-                  linesize, QImage::Format_RGB888).copy();
-}
-
-
 void VideoWidget::initializeGL()
 {
     initializeOpenGLFunctions();
-
+    glClearColor(0, 0, 0, 1);
+    
     m_program = new QOpenGLShaderProgram(this);
 
     if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vertex.vert")) {
@@ -112,8 +86,6 @@ void VideoWidget::initializeGL()
     if (!m_program->link()) {
         qDebug() << "Error link:" << m_program->log();
         return;
-    } else {
-        qDebug() << "Shaders success";
     }
 
     float vertices[] = {
@@ -154,27 +126,50 @@ void VideoWidget::resizeGL(int w, int h)
 
 void VideoWidget::paintGL() 
 {
-    glClearColor(0, 1, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (!m_texture) {
-        qDebug() << "Texture is NULL";
+    if (!m_frame) {
+        qDebug() << "OpenGL hasn't frame";
         return;
     }
-    if (m_currentFrame.isNull()) {
-        qDebug() << "QImage is NULL";
-        return;
+    if (m_newFrame) {
+        if (!m_tex[0] || m_tex[0]->width() != m_frame->width 
+                      || m_tex[0]->height() != m_frame->height)
+            createTextures(m_frame->width, m_frame->height);
+        
+        uploadFrame();
+        m_newFrame = false;
     }
 
-    m_texture->setData(QOpenGLTexture::RGB, QOpenGLTexture::UInt8, m_currentFrame.bits());
+    // Window margins
+    int w = int(width()  * devicePixelRatioF());
+    int h = int(height() * devicePixelRatioF());
 
+    float videoAcpect = float(m_frame->width) / m_frame->height; 
+    float winAscpect  = float(w) / h;
+
+    int vw; int vh;
+    if (videoAcpect > winAscpect) {
+        vw = w;
+        vh = int(w / videoAcpect);
+    } else {
+        vh = h;
+        vw = int(h * videoAcpect);
+    }
+ 
+    glViewport((w - vw) / 2, (h - vh) / 2, vw, vh);
+
+    // Frame
     m_program->bind();
-    m_texture->bind(0);
-    m_program->setUniformValue("vTex", 0);
+    for (int i = 0; i < 3; ++i)
+        m_tex[i]->bind(i);
+
+    m_program->setUniformValue("texY", 0);
+    m_program->setUniformValue("texU", 1);
+    m_program->setUniformValue("texV", 2);
 
     m_vao.bind();
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    
     m_vao.release();
 }
 
@@ -185,6 +180,11 @@ void VideoWidget::cleanupGL()
     delete m_texture;  m_texture = nullptr;
     delete m_program;  m_program = nullptr;
 
+    for (int i = 0; i < 3; ++i) 
+    {
+        delete m_tex[i]; m_tex[i] = nullptr;
+    }
+
     m_vao.destroy();
     m_VertexBuf.destroy();
 
@@ -192,13 +192,7 @@ void VideoWidget::cleanupGL()
 }
 
 VideoWidget::~VideoWidget()
-{
-    if (m_buffer)  av_free(m_buffer);
-    m_buffer = nullptr;
-    
-    if (m_swsCtx)  sws_freeContext(m_swsCtx); 
-    m_swsCtx = nullptr;
-    
+{   
     cleanupGL();
 
     qDebug() << "VideoWidget destroy";
