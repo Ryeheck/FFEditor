@@ -70,7 +70,7 @@ QOpenGLTexture *VideoWidget::setTexture(int width, int height)
 void VideoWidget::initializeGL()
 {
     initializeOpenGLFunctions();
-    glClearColor(0, 1, 0, 0);
+    glClearColor(0, 0, 0, 1);
     
     m_program = new QOpenGLShaderProgram(this);
 
