@@ -138,9 +138,8 @@ void MediaPlayer::stop()
     if (m_state == playbackState::Stopped)  return;
 
     if (m_renderTimer)  m_renderTimer->stop();
-    if (m_audio)        m_audio->stop();
     if (m_decoder)      m_decoder->stop();
-
+    if (m_audio)        m_audio->stop();
 
     m_state = playbackState::Stopped;
 }
