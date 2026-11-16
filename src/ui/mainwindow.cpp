@@ -5,6 +5,7 @@
 #include "../player/MediaPlayer.h"
 #include "../player/VideoWidget.h"
 #include "../EventBus.h"
+#include "animations/anim.hpp"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -15,10 +16,12 @@
 #include <QUrl>
 #include <QToolButton>
 #include <qboxlayout.h>
+#include <qcoreevent.h>
 #include <qicon.h>
 #include <qlabel.h>
 #include <qobject.h>
 #include <qpushbutton.h>
+#include <qtimer.h>
 #include <qtypes.h>
 #include <qwidget.h>
 
@@ -97,7 +100,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Playhead
     playhead = new CustomPlayhead(this);
-    
+
     // Time (playhead)
     // Duration video
     QLabel *durLabel = new QLabel("00:00", this);
@@ -118,7 +121,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     hLayoutPlayhead->addWidget(durLabel);
 
     // Bottom panel
-    QVBoxLayout *bottomPanel = new QVBoxLayout();
+    bottomPanel = new QVBoxLayout();
     bottomPanel->setContentsMargins(10, 15, 10, 15);
     bottomPanel->setSpacing(5);
     
@@ -126,10 +129,43 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     bottomPanel->addLayout(pnToolslLayout);
     
     MainLayout->addLayout(bottomPanel);
+    
+    // Timer (bottom panel)
+    panelTimer = new QTimer(this);
+    panelTimer->setSingleShot(true);
+    panelTimer->setInterval(5000);
+    connect(panelTimer, &QTimer::timeout, this, &MainWindow::hidePanel);
+
+    // Animations
+    anim = new Animation();
+
+    centralWidget->setMouseTracking(true);
+    centralWidget->installEventFilter(this);
+}
+
+void MainWindow::showPanel()
+{
+    if (panelVisible.load())  return;
+    panelVisible.store(true);
+    anim->fadeNestedLayout(bottomPanel, Fade::In, 200);
+}
+void MainWindow::hidePanel()
+{
+    if (!panelVisible.load())  return;
+    panelVisible.store(false);
+    anim->fadeNestedLayout(bottomPanel, Fade::Out, 200);
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    if (obj == centralWidget) {
+        if (event->type() == QEvent::MouseMove) {
+            showPanel();
+            panelTimer->start();
+
+            return true;
+        }
+    }
     if(obj == videoWidget) {
         // If drag file
         if(event->type() == QEvent::DragEnter) { 

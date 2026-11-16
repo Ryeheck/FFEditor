@@ -2,14 +2,17 @@
 #define MAINWINDOW_H
 
 #include "MediaLoader.h"
+#include "animations/anim.hpp"
 #include "painter/CustomVolume.h"
 #include "painter/CustomPlayhead.hpp"
 #include "../player/MediaPlayer.h"
 #include "../player/VideoWidget.h"
 
-
 #include <QMainWindow>
 #include <QVBoxLayout>
+#include <atomic>
+#include <qboxlayout.h>
+#include <qtimer.h>
 
 class MainWindow : public QMainWindow
 {
@@ -25,13 +28,22 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     
 private:
-    VideoWidget    *videoWidget;
+    void hidePanel();
+    void showPanel();
+
     QWidget        *centralWidget;
+    VideoWidget    *videoWidget;    
     MediaPlayer    *player;
     MediaLoader    *loader;
     QVBoxLayout    *MainLayout;
     CustomVolume   *volumeSlider;
     CustomPlayhead *playhead;
+    Animation      *anim;
+
+    QVBoxLayout    *bottomPanel;
+    QTimer         *panelTimer;
+    std::atomic<bool> panelVisible {true};
+
 };
 
 #endif // MAINWINDOW_H
