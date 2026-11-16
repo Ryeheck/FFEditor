@@ -46,6 +46,7 @@ qt_add_executable(FFEditor
     src/ui/painter/CustomVolume.h
     src/ui/painter/CustomVolume.cpp
     src/ui/painter/CustomPlayhead.hpp
+    src/ui/animations/anim.hpp
     src/player/MediaPlayer.h
     src/player/MediaPlayer.cpp
     src/player/Decoder.h
