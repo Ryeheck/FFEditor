@@ -10,6 +10,8 @@
 VideoWidget::VideoWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     connect(&EventBus::instance(), &EventBus::frameChanged, this, &VideoWidget::setFrame);
+
+    setMouseTracking(true);
 }
 void VideoWidget::setFrame(const AVFramePtr &vFrame)
 {
