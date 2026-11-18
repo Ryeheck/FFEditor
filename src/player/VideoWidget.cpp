@@ -18,7 +18,7 @@ void VideoWidget::setFrame(const AVFramePtr &vFrame)
     if (!vFrame)  return;
     
     m_frame = vFrame;
-    m_newFrame = true;
+    isNewFrame.store(true);
 
     update();
 }
@@ -134,13 +134,13 @@ void VideoWidget::paintGL()
         qDebug() << "OpenGL hasn't frame";
         return;
     }
-    if (m_newFrame) {
+    if (isNewFrame.load()) {
         if (!m_tex[0] || m_tex[0]->width() != m_frame->width 
                       || m_tex[0]->height() != m_frame->height)
             createTextures(m_frame->width, m_frame->height);
         
         uploadFrame();
-        m_newFrame = false;
+        isNewFrame.store(false);
     }
 
     // Window margins
