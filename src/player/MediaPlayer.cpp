@@ -136,12 +136,13 @@ bool MediaPlayer::initAudio(int channels)
 void MediaPlayer::stop()
 {
     if (m_state == playbackState::Stopped)  return;
-
+    m_state = playbackState::Stopped;
+    
     if (m_renderTimer)  m_renderTimer->stop();
     if (m_decoder)      m_decoder->stop();
     if (m_audio)        m_audio->stop();
 
-    m_state = playbackState::Stopped;
+    emit EventBus::instance().playbackChanged(m_state);
 }
 
 void MediaPlayer::clear()
@@ -212,6 +213,8 @@ void MediaPlayer::play()
         qDebug() << "Core: Audio not init";
         // int ret = initAudio();
     }
+
+    emit EventBus::instance().playbackChanged(m_state);
 }
 
 void MediaPlayer::playPause()
@@ -231,8 +234,9 @@ void MediaPlayer::pause()
         m_renderTimer->stop();
     if (m_audio)
         m_audio->stop();
+    
+    emit EventBus::instance().playbackChanged(m_state);
 }
-
 
 MediaPlayer::~MediaPlayer()
 {
