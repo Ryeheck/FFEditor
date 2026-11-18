@@ -133,7 +133,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Timer (bottom panel)
     panelTimer = new QTimer(this);
     panelTimer->setSingleShot(true);
-    panelTimer->setInterval(500);
+    panelTimer->setInterval(3000);
     connect(panelTimer, &QTimer::timeout, this, &MainWindow::hidePanel);
 
     // Animations
