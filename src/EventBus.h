@@ -2,6 +2,7 @@
 #define EVENTBUS_H
 
 #include "player/Decoder.h"
+#include "player/MediaPlayer.h"
 
 #include <qobject.h>
 #include <qtmetamacros.h>
@@ -43,6 +44,7 @@ signals:
     void volumeChanged(const float &value);
     void frameChanged(const AVFramePtr &vFrame);
     void startPlayRequested(const QString &path);
+    void playbackChanged(playbackState playback);
 };
 
 #endif // EVENTBUS_H
