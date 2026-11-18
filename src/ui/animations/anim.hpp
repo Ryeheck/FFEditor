@@ -39,8 +39,6 @@ public slots:
     static void fadeOutIn(QWidget *widget, QParallelAnimationGroup *group = nullptr, 
                           Fade fade = Fade::Out, int duration = 500)
     {
-        qDebug() << "widget:" << widget << "fade:" << fade;
-
         QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect(widget);
         widget->setGraphicsEffect(effect);
 
