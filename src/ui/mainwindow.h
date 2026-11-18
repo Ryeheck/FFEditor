@@ -20,7 +20,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-
+    void setPlayback(playbackState state);
     
     ~MainWindow() override;
 
@@ -43,7 +43,8 @@ private:
     QVBoxLayout    *bottomPanel;
     QTimer         *panelTimer;
     std::atomic<bool> isPanelVisible {true};
-
+    
+    playbackState m_state = playbackState::Stopped;
 };
 
 #endif // MAINWINDOW_H

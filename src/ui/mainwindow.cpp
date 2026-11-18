@@ -35,6 +35,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     MainLayout->addSpacing(0);
 
     player      = new MediaPlayer(this);
+    connect(&EventBus::instance(), &EventBus::playbackChanged, this, &MainWindow::setPlayback);
+
     videoWidget = new VideoWidget(this);
 
     MainLayout->addWidget(videoWidget, 1);
@@ -143,6 +145,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     centralWidget->installEventFilter(this);
 }
 
+void MainWindow::setPlayback(playbackState state)
+{
+    m_state = state;
+}
+
 void MainWindow::showPanel()
 {
     if (isPanelVisible.load())  return;
@@ -161,7 +168,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     if (obj == centralWidget) {
         if (event->type() == QEvent::MouseMove ||
             event->type() == QEvent::Resize) {
-            if (window()->isFullScreen() && isPanelVisible.load()) {  
+            if (isFullScreen() && isPanelVisible.load() && 
+                m_state == playbackState::Playing) {  
                 panelTimer->start();
                 showPanel();
             } else {
