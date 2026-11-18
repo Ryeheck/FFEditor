@@ -42,7 +42,7 @@ private:
 
     QVBoxLayout    *bottomPanel;
     QTimer         *panelTimer;
-    std::atomic<bool> panelVisible {true};
+    std::atomic<bool> isPanelVisible {true};
 
 };
 

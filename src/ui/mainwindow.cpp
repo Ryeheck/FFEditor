@@ -133,7 +133,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Timer (bottom panel)
     panelTimer = new QTimer(this);
     panelTimer->setSingleShot(true);
-    panelTimer->setInterval(2000);
+    panelTimer->setInterval(500);
     connect(panelTimer, &QTimer::timeout, this, &MainWindow::hidePanel);
 
     // Animations
@@ -145,43 +145,29 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
 void MainWindow::showPanel()
 {
-    if (panelVisible.load())  return;
-    panelVisible.store(true);
+    if (isPanelVisible.load())  return;
+    isPanelVisible.store(true);
     anim->fadeNestedLayout(bottomPanel, Fade::In, 200);
 }
 void MainWindow::hidePanel()
 {
-    if (!panelVisible.load())  return;
-    panelVisible.store(false);
+    if (!isPanelVisible.load())  return;
+    isPanelVisible.store(false);
     anim->fadeNestedLayout(bottomPanel, Fade::Out, 200);
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == centralWidget) {
-        if (event->type() == QEvent::MouseMove) {
-            if (isFullScreen())  panelTimer->start();
-            
-            showPanel();
-            return true;
-        }
-    }
-    if(obj == videoWidget) {
-        // If drag file
-        if(event->type() == QEvent::DragEnter) { 
-            qDebug() << "DragEnterEvent";
-
-            static_cast<QDragEnterEvent *>(event)->acceptProposedAction();
-            return true;
-        } 
-        // If drop file
-        if(event->type() == QEvent::Drop) {
-            qDebug() << "DropEvent";
-
-            QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
-            const QList<QUrl> urls = dropEvent->mimeData()->urls();
-            // player->loadVideo(urls.first());                                                 !!!!!!!!!!!!!!!!!!!!!!!
-            return true;
+        if (event->type() == QEvent::MouseMove ||
+            event->type() == QEvent::Resize) {
+            if (window()->isFullScreen() && isPanelVisible.load()) {  
+                panelTimer->start();
+                showPanel();
+            } else {
+                panelTimer->stop();
+                showPanel();
+            }
         }
     }
 
