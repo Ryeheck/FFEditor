@@ -238,6 +238,13 @@ void MediaPlayer::pause()
     emit EventBus::instance().playbackChanged(m_state);
 }
 
+void MediaPlayer::editStart(const QString &path)
+{
+    
+    loadVideo(path);
+
+}
+
 MediaPlayer::~MediaPlayer()
 {
     clear();

@@ -7,6 +7,7 @@
 #include <QImage>
 #include <QThread>
 #include <QTimer>
+#include <qobject.h>
 #include <qtypes.h>
 
 extern "C" {
@@ -35,6 +36,7 @@ public:
     void stop();
     void playPause();
     void clear();
+    void editStart(const QString &path);
 public slots:
 
 private slots:
