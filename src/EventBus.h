@@ -45,6 +45,7 @@ signals:
     void frameChanged(const AVFramePtr &vFrame);
     void startPlayRequested(const QString &path);
     void playbackChanged(playbackState playback);
+    void startEditRequested(const QString &path);
 };
 
 #endif // EVENTBUS_H
