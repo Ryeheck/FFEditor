@@ -11,6 +11,7 @@
 #include <QWidget>
 #include <qfileinfo.h>
 #include <qlistwidget.h>
+#include <qlogging.h>
 #include <qnamespace.h>
 #include <qobject.h>
 #include <qpushbutton.h>
@@ -31,6 +32,7 @@ MediaLoader::MediaLoader(QWidget *parent)
     m_removeButton = new QPushButton("Remove file", this);
     m_playButton   = new QPushButton("Play", this);
     m_closeButton  = new QPushButton("Close", this);
+    m_editButton   = new QPushButton("Edit", this);
 
     // Main vertical layout to tab 1 ("File")
     QVBoxLayout *mainFileLayout = new QVBoxLayout(m_fileTab);
@@ -46,6 +48,7 @@ MediaLoader::MediaLoader(QWidget *parent)
     
     top1BtnsLayout->addWidget(m_addButton);
     top1BtnsLayout->addWidget(m_removeButton);
+    top1BtnsLayout->addWidget(m_editButton);
     top1BtnsLayout->addStretch();
 
     top1Layout->addLayout(top1BtnsLayout);
@@ -61,6 +64,15 @@ MediaLoader::MediaLoader(QWidget *parent)
     mainFileLayout->addLayout(Bttm1BtnsLayout);
     m_loaderLayout->addWidget(m_tabWidget);
 
+    connect(m_editButton, &QPushButton::clicked, this, [this] {
+        QListWidgetItem *item = m_listWidget->currentItem();
+        if (!item) {
+            qDebug() << "Not item";
+            return;
+        }
+        QString path = item->data(Qt::UserRole).toString();
+        emit EventBus::instance().startEditRequested(path);
+    });
     connect(m_closeButton, &QPushButton::clicked, this, &MediaLoader::hide);
     connect(m_addButton, &QPushButton::clicked, this, &MediaLoader::onAddButtonClicked);
     connect(m_removeButton, &QPushButton::clicked, this, [this]() {
