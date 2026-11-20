@@ -59,7 +59,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     startBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     startBtn->setIcon(QIcon(":/buttons/play_24.svg"));
     startBtn->setIconSize(QSize(32, 32));
-    startBtn->show();
     
     QToolButton *stopBtn = new QToolButton(this);
     connect(stopBtn, &QToolButton::clicked, player, &MediaPlayer::stop);
@@ -67,7 +66,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     stopBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     stopBtn->setIcon(QIcon(":/buttons/stop_24.svg"));
     stopBtn->setIconSize(QSize(24, 24));
-    stopBtn->show();
     
     QToolButton *pauseBtn = new QToolButton(this);
     connect(pauseBtn, &QToolButton::clicked, player, &MediaPlayer::playPause);
@@ -75,7 +73,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     pauseBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     pauseBtn->setIcon(QIcon(":/buttons/resume_24.svg"));
     pauseBtn->setIconSize(QSize(24, 24));
-    pauseBtn->show();
     
     // Panel Tools (start, stop, ...) buttons
     QHBoxLayout *pnToolslLayout = new QHBoxLayout();
@@ -126,12 +123,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     bottomPanel = new QVBoxLayout();
     bottomPanel->setContentsMargins(10, 15, 10, 15);
     bottomPanel->setSpacing(5);
-    
+
     bottomPanel->addLayout(hLayoutPlayhead);
     bottomPanel->addLayout(pnToolslLayout);
     
     MainLayout->addLayout(bottomPanel);
-    
+
     // Timer (bottom panel)
     panelTimer = new QTimer(this);
     panelTimer->setSingleShot(true);
