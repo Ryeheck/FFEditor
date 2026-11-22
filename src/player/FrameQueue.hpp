@@ -81,31 +81,7 @@ public:
     bool pop(T &value)
     {
         QMutexLocker locker(&m_mutex);
-
-        while (m_queue.empty() && !m_abort) 
-        {
-            m_condNotEmpty.wait(&m_mutex);
-        }
-
-        if (m_queue.empty()) {
-            // qDebug() << "FrameQueue: queue is empty";
-            return false;
-        }
-        if (m_abort) {
-            qDebug() << "FrameQueue: abort";
-            return false;
-        }
-
-        value = m_queue.front();
-        m_queue.pop();
-        m_condNotFull.wakeOne();
-
-        if (m_sizeExtract)
-            m_totalBytes -= m_sizeExtract(value);
-
-        updateDurationLocked();
-        
-        return true;
+        return popLocked(value);
     }
 
     bool isFull(int64_t durationMs, int64_t totalBytes)
@@ -150,6 +126,34 @@ public:
     }
 
 private:
+    bool popLocked(T &value)
+    {
+        while (m_queue.empty() && !m_abort) 
+        {
+            m_condNotEmpty.wait(&m_mutex);
+        }
+
+        if (m_queue.empty()) {
+            // qDebug() << "FrameQueue: queue is empty";
+            return false;
+        }
+        if (m_abort) {
+            qDebug() << "FrameQueue: abort";
+            return false;
+        }
+
+        value = m_queue.front();
+        m_queue.pop();
+        m_condNotFull.wakeOne();
+
+        if (m_sizeExtract)
+            m_totalBytes -= m_sizeExtract(value);
+
+        updateDurationLocked();
+        
+        return true;
+    }
+
     void clearLocked()
     {
         while (!m_queue.empty())
