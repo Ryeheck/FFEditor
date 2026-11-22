@@ -111,6 +111,15 @@ public:
         return dropped;
     }
 
+    bool coversLocked(int64_t posMs)
+    {
+        if (m_queue.empty() || !m_dtsExtract)          
+            return false;
+
+        return (posMs >= m_dtsExtract(m_queue.front()) && 
+                posMs <= m_dtsExtract(m_queue.back()));
+    }
+
     void clear()
     {
         QMutexLocker locker(&m_mutex);
