@@ -11,6 +11,8 @@
 #include <mutex>
 #include <qdebug.h>
 #include <qlogging.h>
+#include <qminmax.h>
+#include <qmutex.h>
 #include <qtypes.h>
 #include <thread>
 
@@ -539,6 +541,22 @@ bool Decoder::isSeeking() const
     return m_isSeekA.load() || m_isSeekV.load();
 }
 
+bool Decoder::seekInBuffer(int64_t posMs)
+{
+    QMutexLocker lockerV(&m_frameVQueue.mutex());
+    QMutexLocker lockerA(&m_frameAQueue.mutex());
+
+    bool Vok = m_frameVQueue.coversLocked(posMs);
+    bool Aok = m_frameAQueue.coversLocked(posMs);
+
+    if (Vok && Aok) {
+        m_frameVQueue.dropBeforeLocked(posMs);
+        m_frameAQueue.dropBeforeLocked(posMs);
+        return true;
+    }
+    return false;
+}
+
 void Decoder::seekTo(int64_t posMs)
 {
     if (!m_formatContext || m_videoStreamIndex < 0) {
@@ -547,8 +565,9 @@ void Decoder::seekTo(int64_t posMs)
     }
 
     qint64 durationMs = getDuration();
-    if (posMs > durationMs)  posMs = durationMs;
-    if (posMs < 0)           posMs = 0;
+    posMs = qBound<qint64>(static_cast<qint64>(0), posMs, durationMs);
+    
+    if (seekInBuffer(posMs))  return;
     
     m_isSeekV.store(true);
     m_isSeekA.store(true);

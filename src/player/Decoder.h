@@ -65,6 +65,7 @@ public slots:
 private:
     void seekTo(int64_t posMs);
     bool isSeeking() const;
+    bool seekInBuffer(int64_t posMs);
     bool demuxShouldWait();
     bool drainVideoFrame(AVFrame *frame);
     bool drainAudioFrame(AVFrame *frame);
