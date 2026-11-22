@@ -5,9 +5,9 @@
 #include <QMutexLocker>
 #include <QWaitCondition>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <qmutex.h>
-#include <queue>
 #include <QDebug>
 
 extern "C" {
@@ -51,7 +51,7 @@ public:
             return false;
         }
 
-        m_queue.push(value);
+        m_queue.push_back(value);
         m_condNotEmpty.wakeOne();
 
         if (m_sizeExtract)
@@ -169,7 +169,7 @@ private:
         }
 
         value = m_queue.front();
-        m_queue.pop();
+        m_queue.pop_front();
         m_condNotFull.wakeOne();
 
         if (m_sizeExtract)
@@ -185,7 +185,7 @@ private:
         while (!m_queue.empty())
         {
             freeItem(m_queue.front());
-            m_queue.pop();
+            m_queue.pop_front();
         }
         
         m_duration   = 0;
@@ -226,7 +226,7 @@ private:
             av_packet_free(&packet);
     }
 
-    std::queue<T> m_queue;
+    std::deque<T> m_queue;
 
     dtsExtractor m_dtsExtract   = nullptr;
     sizeExtractor m_sizeExtract = nullptr;
