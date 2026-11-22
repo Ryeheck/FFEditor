@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <qhashfunctions.h>
 #include <qtypes.h>
 #include <vector>
 
@@ -69,6 +70,7 @@ private:
     bool demuxShouldWait();
     bool drainVideoFrame(AVFrame *frame);
     bool drainAudioFrame(AVFrame *frame);
+    QString errorString(int ret);
 
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;

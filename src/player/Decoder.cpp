@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <mutex>
 #include <qdebug.h>
+#include <qhashfunctions.h>
 #include <qlogging.h>
 #include <qminmax.h>
 #include <qmutex.h>
@@ -236,7 +237,7 @@ bool Decoder::initAudio(int channels)
                                   0, nullptr);
     
     if (ret < 0 || !m_swrContext) {
-        qDebug() << "Failed to allocate swrContext: " << ret;
+        qDebug() << "Failed to allocate swrContext: " << errorString(ret);
         return false;
     }
     if (swr_init(m_swrContext) < 0) {
@@ -269,9 +270,7 @@ void Decoder::demuxLoop()
             m_pktAQueue.push(nullptr);
             m_pktVQueue.push(nullptr);
             
-            char errbuf[AV_ERROR_MAX_STRING_SIZE];
-            av_strerror(ret, errbuf, sizeof(errbuf));
-            qDebug() << "Demux: " << errbuf;
+            qDebug() << "Demux: " << errorString(ret);
             break;
         }
 
@@ -304,9 +303,7 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return true;
         if (ret < 0) {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE];
-            av_strerror(ret, errbuf, sizeof(errbuf));
-            qDebug() << "Drain video send: " << errbuf;
+            qDebug() << "Drain video send: " << errorString(ret);
             return false;
         }
 
@@ -394,9 +391,7 @@ bool Decoder::drainAudioFrame(AVFrame *frame)
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return true;
         if (ret < 0) {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE];
-            av_strerror(ret, errbuf, sizeof(errbuf));
-            qDebug() << "Drain audio send: " << errbuf;
+            qDebug() << "Drain audio send: " << errorString(ret);
             return false;
         }
 
@@ -589,17 +584,17 @@ void Decoder::seekTo(int64_t posMs)
         AVSEEK_FLAG_BACKWARD                           // first I-frame
     );
     if (ret < 0) {
-        qDebug() << "Seek file error: " << ret;
+        qDebug() << "Seek file error: " << errorString(ret);
         ret = av_seek_frame(m_formatContext, m_videoStreamIndex, 
                     targetTs, AVSEEK_FLAG_BACKWARD
         );
         if (ret < 0) {
-            qDebug() << "Seek frame error:" << ret;
+            qDebug() << "Seek frame error:" << errorString(ret);
             return;
         }
     }
 
-    // Clear queue
+    // Clear queues
     m_pktAQueue.clear();
     m_pktVQueue.clear();
     
@@ -641,6 +636,13 @@ bool Decoder::demuxShouldWait()
         m_pktAQueue.isFull(durMs, KBytes))
         return true;
     return false;
+}
+
+QString Decoder::errorString(int ret)
+{
+    char errbuf[AV_ERROR_MAX_STRING_SIZE];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    return QString(errbuf);
 }
 
 int64_t Decoder::getFramePosMs(const AVFrame *frame, int streamIndex) const
