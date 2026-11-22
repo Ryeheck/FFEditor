@@ -64,6 +64,7 @@ public slots:
     
 private:
     void seekTo(int64_t posMs);
+    bool isSeeking() const;
     bool demuxShouldWait();
     bool drainVideoFrame(AVFrame *frame);
     bool drainAudioFrame(AVFrame *frame);
@@ -87,7 +88,8 @@ private:
 
     std::atomic<bool> m_running  {false};
     std::atomic<bool> m_seekReq  {false};
-    std::atomic<bool> m_isSeeking{false};
+    std::atomic<bool> m_isSeekV  {false};
+    std::atomic<bool> m_isSeekA  {false};
     std::atomic<bool> m_Iframe   {false};
     std::atomic<bool> m_preview  {false};
 

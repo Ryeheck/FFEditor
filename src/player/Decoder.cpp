@@ -15,6 +15,7 @@
 #include <thread>
 
 extern "C" {
+#include <libavutil/mathematics.h>
 #include <libavcodec/codec.h>
 #include <libavcodec/codec_id.h>
 #include <libavutil/rational.h>
@@ -308,8 +309,7 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
         }
 
         qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
-
-        if (m_isSeeking.load()) {
+        if (isSeeking()) {
             if (m_preview.exchange(false)) {
                 videoFrame vFrame;
                 vFrame.posMs   = posMs;
@@ -321,8 +321,8 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
             if (posMs < m_seekTargetMs.load()) {
                 av_frame_unref(frame);
                 continue;
-            } 
-            m_isSeeking.store(false);
+            }
+            m_isSeekV.store(false);
         }
 
         videoFrame vFrame;
@@ -399,6 +399,14 @@ bool Decoder::drainAudioFrame(AVFrame *frame)
         }
 
         qint64 posMs = getFramePosMs(frame, m_audioStreamIndex);
+        if (isSeeking()) {
+            if (posMs < m_seekTargetMs.load()) {
+                av_frame_unref(frame);
+                continue;
+            }
+            m_isSeekA.store(false);
+        }
+
         if (m_Iframe.exchange(false)) 
             emit EventBus::instance().positionAudioChanged(posMs);
 
@@ -508,7 +516,8 @@ void Decoder::reset()
     m_seekTargetMs.store(0);
     m_running     .store(false);
     m_seekReq     .store(false);
-    m_isSeeking   .store(false);
+    m_isSeekV     .store(false);
+    m_isSeekA     .store(false);
     m_Iframe      .store(false);
     m_preview     .store(false);
 
@@ -525,6 +534,11 @@ void Decoder::seek(qint64 posMs)
     m_seekTargetMs.store(static_cast<int64_t>(posMs));
 }
 
+bool Decoder::isSeeking() const
+{
+    return m_isSeekA.load() || m_isSeekV.load();
+}
+
 void Decoder::seekTo(int64_t posMs)
 {
     if (!m_formatContext || m_videoStreamIndex < 0) {
@@ -536,8 +550,9 @@ void Decoder::seekTo(int64_t posMs)
     if (posMs > durationMs)  posMs = durationMs;
     if (posMs < 0)           posMs = 0;
     
-    m_isSeeking.store(true);
-    
+    m_isSeekV.store(true);
+    m_isSeekA.store(true);
+
     // Stream
     AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
 
@@ -551,29 +566,37 @@ void Decoder::seekTo(int64_t posMs)
     // Seek
     int ret = avformat_seek_file(
         m_formatContext, m_videoStreamIndex,
-        INT64_MIN, targetTs, INT64_MAX,    // Range [INT64_MIN : targetTs : INT64_MAX]
+        INT64_MIN, targetTs, targetTs,    // Range [INT64_MIN : targetTs : targetTs]
         AVSEEK_FLAG_BACKWARD                           // first I-frame
     );
     if (ret < 0) {
-        qDebug() << "Seek error: " << ret;
-        return;
+        qDebug() << "Seek file error: " << ret;
+        ret = av_seek_frame(m_formatContext, m_videoStreamIndex, 
+                    targetTs, AVSEEK_FLAG_BACKWARD
+        );
+        if (ret < 0) {
+            qDebug() << "Seek frame error:" << ret;
+            return;
+        }
     }
 
     // Clear queue
-    m_pktAQueue  .clear();
-    m_pktVQueue  .clear();
-    m_frameAQueue.clear();
-    m_frameVQueue.clear();
+    m_pktAQueue.clear();
+    m_pktVQueue.clear();
     
     {
         std::lock_guard<std::mutex> lock(videoMtx);
-        if (m_codecContextVideo)  avcodec_flush_buffers(m_codecContextVideo);
+        if (m_codecContextVideo) {
+            avcodec_flush_buffers(m_codecContextVideo);
+            m_frameVQueue.clear();
+        }
     }
     {
         std::lock_guard<std::mutex> lock(audioMtx);
         if (m_codecContextAudio) {
             avcodec_flush_buffers(m_codecContextAudio);
-            
+            m_frameAQueue.clear();
+
             // Rewind audio to first I-frame
             m_Iframe.store(true);
         }
