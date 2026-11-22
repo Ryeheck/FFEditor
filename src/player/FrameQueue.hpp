@@ -94,16 +94,14 @@ public:
         return durIsFull || bytesIsFull;
     }
 
-    bool dropBefore(int64_t durationMs)
+    bool dropBeforeLocked(int64_t posMs)
     {
-        QMutexLocker locker(&m_mutex);
-        if (m_queue.empty() || !m_dtsExtract)           return false;
-        if (durationMs > m_dtsExtract(m_queue.back()))  return false;
+        if (m_queue.size() <= 2 || !m_dtsExtract)  return false;
         
         bool dropped = false;
         T value {};
         
-        while (!m_queue.empty() && m_dtsExtract(m_queue.front()) < durationMs - 20) 
+        while (m_queue.size() >= 2 && m_dtsExtract(m_queue[1]) <= posMs) 
         {
             popLocked(value);
             dropped = true;
@@ -149,6 +147,11 @@ public:
         m_abort = true;
         m_condNotEmpty.wakeAll();
         m_condNotFull .wakeAll();
+    }
+
+    QMutex &mutex()
+    {
+        return m_mutex;
     }
 
 private:
