@@ -97,20 +97,16 @@ public:
     bool dropBefore(int64_t durationMs)
     {
         QMutexLocker locker(&m_mutex);
-        if (m_queue.empty() || !m_dtsExtract)  return false;
-
-        int64_t dur = m_dtsExtract(m_queue.back());
+        if (m_queue.empty() || !m_dtsExtract)           return false;
         if (durationMs > m_dtsExtract(m_queue.back()))  return false;
         
         bool dropped = false;
         T value {};
         
-        dur = m_dtsExtract(m_queue.front());
-        while (!m_queue.empty() && dur < durationMs - 20) 
+        while (!m_queue.empty() && m_dtsExtract(m_queue.front()) < durationMs - 20) 
         {
             popLocked(value);
             dropped = true;
-            dur = m_dtsExtract(m_queue.front());
         }
         return dropped;
     }
