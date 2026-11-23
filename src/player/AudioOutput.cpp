@@ -132,7 +132,6 @@ void AudioOutput::reset()
     m_aFrameOffset = 0;
     m_sampleRate   = 0;
     m_duration     = 0;
-    m_decoder      = nullptr;
     m_aFrame       = audioFrame{};
     m_playedAudioSamples.store(0);
     m_channels          .store(2);
