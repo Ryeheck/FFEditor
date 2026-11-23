@@ -10,6 +10,7 @@
 #include <qlayoutitem.h>
 #include <qlist.h>
 #include <qlogging.h>
+#include <qmargins.h>
 #include <qobject.h>
 #include <qparallelanimationgroup.h>
 #include <qpropertyanimation.h>
@@ -76,6 +77,9 @@ public slots:
         QList<QWidget *> widgets = collectWidgets(layout);
         if (widgets.isEmpty())  return;
 
+        if (layout->contentsMargins() != QMargins(0, 0, 0, 0))
+            m_margins = layout->contentsMargins();
+
         QParallelAnimationGroup *group = new QParallelAnimationGroup(layout);
         for (QWidget *w : widgets)
             fadeOutIn(w, group, fade, duration);
@@ -85,12 +89,22 @@ public slots:
             return;
         }
 
-        connect(group, &QAnimationGroup::finished, layout, [widgets, fade] () {
-            for (QWidget *w : widgets) {
+        connect(group, &QAnimationGroup::finished, this, [this, layout, widgets, fade] () {
+            for (QWidget *w : widgets)
+            {
                 if      (fade == Fade::In)   w->show();
                 else if (fade == Fade::Out)  w->hide();
 
                 w->setGraphicsEffect(nullptr);
+            }
+
+            if (fade == Fade::In) {
+                layout->setContentsMargins(m_margins);
+            } else if (fade == Fade::Out) {
+                QMargins margins = layout->contentsMargins();
+                if (!margins.isNull())  
+                    m_margins = margins;
+                layout->setContentsMargins(0, 0, 0, 0);
             }
         });
 
@@ -112,6 +126,8 @@ private:
 
         return result;
     }
+
+    QMargins m_margins;
 };
 
 #endif // ANIM_HPP
