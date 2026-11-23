@@ -5,9 +5,9 @@
 #include <QMutexLocker>
 #include <QWaitCondition>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <qmutex.h>
-#include <queue>
 #include <QDebug>
 
 extern "C" {
@@ -51,7 +51,7 @@ public:
             return false;
         }
 
-        m_queue.push(value);
+        m_queue.push_back(value);
         m_condNotEmpty.wakeOne();
 
         if (m_sizeExtract)
@@ -81,31 +81,7 @@ public:
     bool pop(T &value)
     {
         QMutexLocker locker(&m_mutex);
-
-        while (m_queue.empty() && !m_abort) 
-        {
-            m_condNotEmpty.wait(&m_mutex);
-        }
-
-        if (m_queue.empty()) {
-            // qDebug() << "FrameQueue: queue is empty";
-            return false;
-        }
-        if (m_abort) {
-            qDebug() << "FrameQueue: abort";
-            return false;
-        }
-
-        value = m_queue.front();
-        m_queue.pop();
-        m_condNotFull.wakeOne();
-
-        if (m_sizeExtract)
-            m_totalBytes -= m_sizeExtract(value);
-
-        updateDurationLocked();
-        
-        return true;
+        return popLocked(value);
     }
 
     bool isFull(int64_t durationMs, int64_t totalBytes)
@@ -116,6 +92,30 @@ public:
         bool bytesIsFull = (totalBytes > 0) && (m_totalBytes >= totalBytes);
 
         return durIsFull || bytesIsFull;
+    }
+
+    bool dropBeforeLocked(int64_t posMs)
+    {
+        if (m_queue.size() <= 2 || !m_dtsExtract)  return false;
+        
+        bool dropped = false;
+        T value {};
+        
+        while (m_queue.size() >= 2 && m_dtsExtract(m_queue[1]) <= posMs) 
+        {
+            popLocked(value);
+            dropped = true;
+        }
+        return dropped;
+    }
+
+    bool coversLocked(int64_t posMs)
+    {
+        if (m_queue.empty() || !m_dtsExtract)          
+            return false;
+
+        return (posMs >= m_dtsExtract(m_queue.front()) && 
+                posMs <= m_dtsExtract(m_queue.back()));
     }
 
     void clear()
@@ -149,13 +149,46 @@ public:
         m_condNotFull .wakeAll();
     }
 
+    QMutex &mutex()
+    {
+        return m_mutex;
+    }
+
 private:
+    bool popLocked(T &value)
+    {
+        while (m_queue.empty() && !m_abort) 
+        {
+            m_condNotEmpty.wait(&m_mutex);
+        }
+
+        if (m_queue.empty()) {
+            // qDebug() << "FrameQueue: queue is empty";
+            return false;
+        }
+        if (m_abort) {
+            qDebug() << "FrameQueue: abort";
+            return false;
+        }
+
+        value = m_queue.front();
+        m_queue.pop_front();
+        m_condNotFull.wakeOne();
+
+        if (m_sizeExtract)
+            m_totalBytes -= m_sizeExtract(value);
+
+        updateDurationLocked();
+        
+        return true;
+    }
+
     void clearLocked()
     {
         while (!m_queue.empty())
         {
             freeItem(m_queue.front());
-            m_queue.pop();
+            m_queue.pop_front();
         }
         
         m_duration   = 0;
@@ -196,7 +229,7 @@ private:
             av_packet_free(&packet);
     }
 
-    std::queue<T> m_queue;
+    std::deque<T> m_queue;
 
     dtsExtractor m_dtsExtract   = nullptr;
     sizeExtractor m_sizeExtract = nullptr;

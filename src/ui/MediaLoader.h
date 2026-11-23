@@ -7,6 +7,7 @@
 #include <QListWidget>
 #include <QTabWidget>
 #include <QDialog>
+#include <qpushbutton.h>
 
 class MediaLoader : public QDialog
 {
@@ -29,6 +30,7 @@ private:
     QPushButton *m_removeButton;
     QPushButton *m_playButton;
     QPushButton *m_closeButton;
+    QPushButton *m_editButton;
 };
 
 #endif // MEDIALOADER_H

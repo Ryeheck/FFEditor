@@ -38,7 +38,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(&EventBus::instance(), &EventBus::playbackChanged, this, &MainWindow::setPlayback);
 
     videoWidget = new VideoWidget(this);
-
     MainLayout->addWidget(videoWidget, 1);
 
     loader = new MediaLoader(this);
@@ -53,6 +52,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
         loader->hide();
     });
     
+     // Edit tools
+    connect(&EventBus::instance(), &EventBus::startEditRequested, this, [this] (const QString &path) {
+        QString filepath = path;
+
+        player->editStart(filepath);
+        loader->hide();
+    });
+
     QToolButton *startBtn = new QToolButton(this);
     connect(startBtn, &QToolButton::clicked, loader, &MediaLoader::show);
 

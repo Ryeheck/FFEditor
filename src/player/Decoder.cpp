@@ -8,13 +8,18 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <iso646.h>
 #include <mutex>
 #include <qdebug.h>
+#include <qhashfunctions.h>
 #include <qlogging.h>
+#include <qminmax.h>
+#include <qmutex.h>
 #include <qtypes.h>
 #include <thread>
 
 extern "C" {
+#include <libavutil/mathematics.h>
 #include <libavcodec/codec.h>
 #include <libavcodec/codec_id.h>
 #include <libavutil/rational.h>
@@ -57,6 +62,10 @@ static int64_t AFrameMsExtract(const audioFrame &aFrame) {
 
 static int64_t AFrameSizeExtract(const audioFrame &aFrame) {
     return static_cast<int64_t>(aFrame.samples.size() * sizeof(float));
+}
+
+bool Decoder::isPaused() {
+    return !m_paused.load() || m_abort.load();
 }
 
 Decoder::Decoder(QObject *parent) : QObject(parent)
@@ -185,6 +194,8 @@ bool Decoder::loadSource(const QString &filename)
         return false;
     }
 
+    initAudio();
+    notify();
     return true;
 }
 
@@ -196,7 +207,7 @@ void Decoder::notify()
 
     emit EventBus::instance().durationChanged(durationMs);
 
-    m_running.store(true);
+    m_abort.store(false);
 }
 
 bool Decoder::initAudio(int channels)
@@ -233,7 +244,7 @@ bool Decoder::initAudio(int channels)
                                   0, nullptr);
     
     if (ret < 0 || !m_swrContext) {
-        qDebug() << "Failed to allocate swrContext: " << ret;
+        qDebug() << "Failed to allocate swrContext: " << errorString(ret);
         return false;
     }
     if (swr_init(m_swrContext) < 0) {
@@ -245,8 +256,9 @@ bool Decoder::initAudio(int channels)
 
 void Decoder::demuxLoop()
 {
-    while (m_running.load())
+    while (!m_abort.load())
     {
+        waitIfPause();
         if (m_seekReq.exchange(false)) {
             seekTo(m_seekTargetMs.load());
             continue;
@@ -266,9 +278,7 @@ void Decoder::demuxLoop()
             m_pktAQueue.push(nullptr);
             m_pktVQueue.push(nullptr);
             
-            char errbuf[AV_ERROR_MAX_STRING_SIZE];
-            av_strerror(ret, errbuf, sizeof(errbuf));
-            qDebug() << "Demux: " << errbuf;
+            qDebug() << "Demux: " << errorString(ret);
             break;
         }
 
@@ -295,21 +305,18 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
         return false;
     }
 
-    while (m_running.load()) // FRAME LOAD
-    {  
+    while (!m_abort.load()) // FRAME LOAD
+    {
         int ret = avcodec_receive_frame(m_codecContextVideo, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return true;
         if (ret < 0) {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE];
-            av_strerror(ret, errbuf, sizeof(errbuf));
-            qDebug() << "Drain video send: " << errbuf;
+            qDebug() << "Drain video send: " << errorString(ret);
             return false;
         }
 
         qint64 posMs = getFramePosMs(frame, m_videoStreamIndex);
-
-        if (m_isSeeking.load()) {
+        if (isSeeking()) {
             if (m_preview.exchange(false)) {
                 videoFrame vFrame;
                 vFrame.posMs   = posMs;
@@ -321,8 +328,8 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
             if (posMs < m_seekTargetMs.load()) {
                 av_frame_unref(frame);
                 continue;
-            } 
-            m_isSeeking.store(false);
+            }
+            m_isSeekV.store(false);
         }
 
         videoFrame vFrame;
@@ -348,8 +355,9 @@ void Decoder::decodeVideoLoop()
     constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
     AVPacket *packet;
 
-    while (m_running.load()) 
+    while (!m_abort.load()) 
     {
+        waitIfPause();
         if (m_frameVQueue.isFull(durMs, KBytes)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
@@ -361,7 +369,7 @@ void Decoder::decodeVideoLoop()
 
         // End file
         if (packet == nullptr) {
-            std::lock_guard<std::mutex> lock(videoMtx);
+            std::lock_guard<std::mutex> lock(m_videoMtx);
 
             avcodec_send_packet(m_codecContextVideo, nullptr);
             drainVideoFrame(frame);
@@ -370,7 +378,7 @@ void Decoder::decodeVideoLoop()
         }
 
         {
-            std::lock_guard<std::mutex> lock(videoMtx);
+            std::lock_guard<std::mutex> lock(m_videoMtx);
 
             int ret = avcodec_send_packet(m_codecContextVideo, packet);
             av_packet_free(&packet);
@@ -386,19 +394,27 @@ void Decoder::decodeVideoLoop()
 
 bool Decoder::drainAudioFrame(AVFrame *frame)
 {
-    while (m_running.load())
+    if (!m_swrContext)  return false;
+
+    while (!m_abort.load())
     {  
         int ret = avcodec_receive_frame(m_codecContextAudio, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return true;
         if (ret < 0) {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE];
-            av_strerror(ret, errbuf, sizeof(errbuf));
-            qDebug() << "Drain audio send: " << errbuf;
+            qDebug() << "Drain audio send: " << errorString(ret);
             return false;
         }
 
         qint64 posMs = getFramePosMs(frame, m_audioStreamIndex);
+        if (isSeeking()) {
+            if (posMs < m_seekTargetMs.load()) {
+                av_frame_unref(frame);
+                continue;
+            }
+            m_isSeekA.store(false);
+        }
+
         if (m_Iframe.exchange(false)) 
             emit EventBus::instance().positionAudioChanged(posMs);
 
@@ -435,14 +451,19 @@ bool Decoder::drainAudioFrame(AVFrame *frame)
 
 void Decoder::decodeAudioLoop()
 {
+    if (!m_swrContext) {
+        qDebug() << "Decoder not init audio";
+        return;
+    }
     AVFrame *frame = av_frame_alloc();
 
     int64_t durMs  = 5000;             // Max queue = 5 sec
     int64_t KBytes = 5 * 1024 * 1024;  // Max queue = 5 Mb
     AVPacket *packet;
 
-    while (m_running.load()) 
+    while (!m_abort.load()) 
     {
+        waitIfPause();
         if (m_frameAQueue.isFull(durMs, KBytes)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
@@ -453,7 +474,7 @@ void Decoder::decodeAudioLoop()
             break;
 
         {
-            std::lock_guard<std::mutex> lock(audioMtx);
+            std::lock_guard<std::mutex> lock(m_audioMtx);
 
             // End file
             if (packet == nullptr) {
@@ -466,7 +487,7 @@ void Decoder::decodeAudioLoop()
 
             if (ret < 0) continue;
             if (!drainAudioFrame(frame)) {
-                qDebug() << "drain video frame send false";
+                qDebug() << "drain audio frame send false";
                 // Something..
             }
         }
@@ -474,9 +495,30 @@ void Decoder::decodeAudioLoop()
     av_frame_free(&frame);
 }
 
+void Decoder::waitIfPause()
+{
+    std::unique_lock locker(m_pauseMtx);
+    m_pauseCv.wait(locker, [&] () {  return !m_paused.load() || m_abort.load();  });
+}
+
+void Decoder::pause()
+{
+    std::lock_guard locker(m_pauseMtx);
+    m_paused.store(true);
+}
+
+void Decoder::resume()
+{
+    {
+        std::lock_guard locker(m_pauseMtx);
+        m_paused.store(false);
+    }
+    m_pauseCv.notify_all();
+}
+
 void Decoder::stop()
 {
-    m_running.store(false);
+    m_abort.store(true);
 
     m_pktAQueue  .abort();
     m_pktVQueue  .abort();
@@ -506,9 +548,10 @@ void Decoder::reset()
     m_frameVQueue.reset();
 
     m_seekTargetMs.store(0);
-    m_running     .store(false);
+    m_abort       .store(true);
     m_seekReq     .store(false);
-    m_isSeeking   .store(false);
+    m_isSeekV     .store(false);
+    m_isSeekA     .store(false);
     m_Iframe      .store(false);
     m_preview     .store(false);
 
@@ -525,6 +568,27 @@ void Decoder::seek(qint64 posMs)
     m_seekTargetMs.store(static_cast<int64_t>(posMs));
 }
 
+bool Decoder::isSeeking() const
+{
+    return m_isSeekA.load() || m_isSeekV.load();
+}
+
+bool Decoder::seekInBuffer(int64_t posMs)
+{
+    QMutexLocker lockerV(&m_frameVQueue.mutex());
+    QMutexLocker lockerA(&m_frameAQueue.mutex());
+
+    bool Vok = m_frameVQueue.coversLocked(posMs);
+    bool Aok = m_frameAQueue.coversLocked(posMs);
+
+    if (Vok && Aok) {
+        m_frameVQueue.dropBeforeLocked(posMs);
+        m_frameAQueue.dropBeforeLocked(posMs);
+        return true;
+    }
+    return false;
+}
+
 void Decoder::seekTo(int64_t posMs)
 {
     if (!m_formatContext || m_videoStreamIndex < 0) {
@@ -533,11 +597,13 @@ void Decoder::seekTo(int64_t posMs)
     }
 
     qint64 durationMs = getDuration();
-    if (posMs > durationMs)  posMs = durationMs;
-    if (posMs < 0)           posMs = 0;
+    posMs = qBound<qint64>(static_cast<qint64>(0), posMs, durationMs);
     
-    m_isSeeking.store(true);
+    if (seekInBuffer(posMs))  return;
     
+    m_isSeekV.store(true);
+    m_isSeekA.store(true);
+
     // Stream
     AVStream *stream = m_formatContext->streams[m_videoStreamIndex];
 
@@ -551,29 +617,37 @@ void Decoder::seekTo(int64_t posMs)
     // Seek
     int ret = avformat_seek_file(
         m_formatContext, m_videoStreamIndex,
-        INT64_MIN, targetTs, INT64_MAX,    // Range [INT64_MIN : targetTs : INT64_MAX]
+        INT64_MIN, targetTs, targetTs,    // Range [INT64_MIN : targetTs : targetTs]
         AVSEEK_FLAG_BACKWARD                           // first I-frame
     );
     if (ret < 0) {
-        qDebug() << "Seek error: " << ret;
-        return;
+        qDebug() << "Seek file error: " << errorString(ret);
+        ret = av_seek_frame(m_formatContext, m_videoStreamIndex, 
+                    targetTs, AVSEEK_FLAG_BACKWARD
+        );
+        if (ret < 0) {
+            qDebug() << "Seek frame error:" << errorString(ret);
+            return;
+        }
     }
 
-    // Clear queue
-    m_pktAQueue  .clear();
-    m_pktVQueue  .clear();
-    m_frameAQueue.clear();
-    m_frameVQueue.clear();
+    // Clear queues
+    m_pktAQueue.clear();
+    m_pktVQueue.clear();
     
     {
-        std::lock_guard<std::mutex> lock(videoMtx);
-        if (m_codecContextVideo)  avcodec_flush_buffers(m_codecContextVideo);
+        std::lock_guard<std::mutex> lock(m_videoMtx);
+        if (m_codecContextVideo) {
+            avcodec_flush_buffers(m_codecContextVideo);
+            m_frameVQueue.clear();
+        }
     }
     {
-        std::lock_guard<std::mutex> lock(audioMtx);
+        std::lock_guard<std::mutex> lock(m_audioMtx);
         if (m_codecContextAudio) {
             avcodec_flush_buffers(m_codecContextAudio);
-            
+            m_frameAQueue.clear();
+
             // Rewind audio to first I-frame
             m_Iframe.store(true);
         }
@@ -599,6 +673,13 @@ bool Decoder::demuxShouldWait()
         m_pktAQueue.isFull(durMs, KBytes))
         return true;
     return false;
+}
+
+QString Decoder::errorString(int ret)
+{
+    char errbuf[AV_ERROR_MAX_STRING_SIZE];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    return QString(errbuf);
 }
 
 int64_t Decoder::getFramePosMs(const AVFrame *frame, int streamIndex) const
