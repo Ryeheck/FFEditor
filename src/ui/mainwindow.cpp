@@ -5,6 +5,7 @@
 #include "../player/MediaPlayer.h"
 #include "../player/VideoWidget.h"
 #include "../EventBus.h"
+#include "animations/anim.hpp"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -15,10 +16,12 @@
 #include <QUrl>
 #include <QToolButton>
 #include <qboxlayout.h>
+#include <qcoreevent.h>
 #include <qicon.h>
 #include <qlabel.h>
 #include <qobject.h>
 #include <qpushbutton.h>
+#include <qtimer.h>
 #include <qtypes.h>
 #include <qwidget.h>
 
@@ -32,6 +35,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     MainLayout->addSpacing(0);
 
     player      = new MediaPlayer(this);
+    connect(&EventBus::instance(), &EventBus::playbackChanged, this, &MainWindow::setPlayback);
+
     videoWidget = new VideoWidget(this);
 
     MainLayout->addWidget(videoWidget, 1);
@@ -97,7 +102,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     
     // Playhead
     playhead = new CustomPlayhead(this);
-    
+
     // Time (playhead)
     // Duration video
     QLabel *durLabel = new QLabel("00:00", this);
@@ -118,7 +123,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     hLayoutPlayhead->addWidget(durLabel);
 
     // Bottom panel
-    QVBoxLayout *bottomPanel = new QVBoxLayout();
+    bottomPanel = new QVBoxLayout();
     bottomPanel->setContentsMargins(10, 15, 10, 15);
     bottomPanel->setSpacing(5);
     
@@ -126,26 +131,51 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     bottomPanel->addLayout(pnToolslLayout);
     
     MainLayout->addLayout(bottomPanel);
+    
+    // Timer (bottom panel)
+    panelTimer = new QTimer(this);
+    panelTimer->setSingleShot(true);
+    panelTimer->setInterval(3000);
+    connect(panelTimer, &QTimer::timeout, this, &MainWindow::hidePanel);
+
+    // Animations
+    anim = new Animation();
+
+    centralWidget->setMouseTracking(true);
+    centralWidget->installEventFilter(this);
+}
+
+void MainWindow::setPlayback(playbackState state)
+{
+    m_state = state;
+}
+
+void MainWindow::showPanel()
+{
+    if (isPanelVisible.load())  return;
+    isPanelVisible.store(true);
+    anim->fadeNestedLayout(bottomPanel, Fade::In, 200);
+}
+void MainWindow::hidePanel()
+{
+    if (!isPanelVisible.load())  return;
+    isPanelVisible.store(false);
+    anim->fadeNestedLayout(bottomPanel, Fade::Out, 200);
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    if(obj == videoWidget) {
-        // If drag file
-        if(event->type() == QEvent::DragEnter) { 
-            qDebug() << "DragEnterEvent";
-
-            static_cast<QDragEnterEvent *>(event)->acceptProposedAction();
-            return true;
-        } 
-        // If drop file
-        if(event->type() == QEvent::Drop) {
-            qDebug() << "DropEvent";
-
-            QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
-            const QList<QUrl> urls = dropEvent->mimeData()->urls();
-            // player->loadVideo(urls.first());                                                 !!!!!!!!!!!!!!!!!!!!!!!
-            return true;
+    if (obj == centralWidget) {
+        if (event->type() == QEvent::MouseMove ||
+            event->type() == QEvent::Resize) {
+            if (isFullScreen() && isPanelVisible.load() && 
+                m_state == playbackState::Playing) {  
+                panelTimer->start();
+                showPanel();
+            } else {
+                panelTimer->stop();
+                showPanel();
+            }
         }
     }
 

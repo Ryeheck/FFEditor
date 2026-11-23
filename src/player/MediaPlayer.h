@@ -36,7 +36,6 @@ public:
     void playPause();
     void clear();
 public slots:
-    
 
 private slots:
 

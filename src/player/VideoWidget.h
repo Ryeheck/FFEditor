@@ -3,6 +3,7 @@
 
 #include "Decoder.h"
 
+#include <atomic>
 #include <qopenglfunctions_3_3_core.h>
 #include <qopengltexture.h>
 #include <qopenglvertexarrayobject.h>
@@ -34,11 +35,11 @@ private:
     void createTextures(int width, int height);
     void uploadFrame();
     void cleanupGL();
-    
+
     // OpenGL
     QOpenGLTexture *m_tex[3] = {nullptr, nullptr, nullptr};
     AVFramePtr m_frame;
-    bool m_newFrame = false;
+    std::atomic<bool> isNewFrame {false};
 
     QOpenGLBuffer            m_VertexBuf;
     QOpenGLVertexArrayObject m_vao;
