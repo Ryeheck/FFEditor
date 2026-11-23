@@ -52,6 +52,7 @@ public:
 
 public slots:
     void stop();
+    void pause();
     void reset();
     void clear();
     bool loadSource(const QString &filename);
@@ -89,12 +90,12 @@ private:
     std::mutex videoMtx;
     std::mutex audioMtx;
 
-    std::atomic<bool> m_running  {false};
-    std::atomic<bool> m_seekReq  {false};
-    std::atomic<bool> m_isSeekV  {false};
-    std::atomic<bool> m_isSeekA  {false};
-    std::atomic<bool> m_Iframe   {false};
-    std::atomic<bool> m_preview  {false};
+    std::atomic<bool> m_abort   {false};
+    std::atomic<bool> m_seekReq {false};
+    std::atomic<bool> m_isSeekV {false};
+    std::atomic<bool> m_isSeekA {false};
+    std::atomic<bool> m_Iframe  {false};
+    std::atomic<bool> m_preview {false};
 
     std::atomic<int64_t> m_seekTargetMs{0};
 

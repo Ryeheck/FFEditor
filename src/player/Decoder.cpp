@@ -200,7 +200,7 @@ void Decoder::notify()
 
     emit EventBus::instance().durationChanged(durationMs);
 
-    m_running.store(true);
+    m_abort.store(false);
 }
 
 bool Decoder::initAudio(int channels)
@@ -249,7 +249,7 @@ bool Decoder::initAudio(int channels)
 
 void Decoder::demuxLoop()
 {
-    while (m_running.load())
+    while (!m_abort.load())
     {
         if (m_seekReq.exchange(false)) {
             seekTo(m_seekTargetMs.load());
@@ -297,7 +297,7 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
         return false;
     }
 
-    while (m_running.load()) // FRAME LOAD
+    while (!m_abort.load()) // FRAME LOAD
     {  
         int ret = avcodec_receive_frame(m_codecContextVideo, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
@@ -347,7 +347,7 @@ void Decoder::decodeVideoLoop()
     constexpr int64_t KBytes = 200 * 1024 * 1024;  // Max queue = 200 MB
     AVPacket *packet;
 
-    while (m_running.load()) 
+    while (!m_abort.load()) 
     {
         if (m_frameVQueue.isFull(durMs, KBytes)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -385,7 +385,7 @@ void Decoder::decodeVideoLoop()
 
 bool Decoder::drainAudioFrame(AVFrame *frame)
 {
-    while (m_running.load())
+    while (!m_abort.load())
     {  
         int ret = avcodec_receive_frame(m_codecContextAudio, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
@@ -446,7 +446,7 @@ void Decoder::decodeAudioLoop()
     int64_t KBytes = 5 * 1024 * 1024;  // Max queue = 5 Mb
     AVPacket *packet;
 
-    while (m_running.load()) 
+    while (!m_abort.load()) 
     {
         if (m_frameAQueue.isFull(durMs, KBytes)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -479,9 +479,14 @@ void Decoder::decodeAudioLoop()
     av_frame_free(&frame);
 }
 
+void Decoder::pause()
+{
+
+}
+
 void Decoder::stop()
 {
-    m_running.store(false);
+    m_abort.store(true);
 
     m_pktAQueue  .abort();
     m_pktVQueue  .abort();
@@ -511,7 +516,7 @@ void Decoder::reset()
     m_frameVQueue.reset();
 
     m_seekTargetMs.store(0);
-    m_running     .store(false);
+    m_abort       .store(true);
     m_seekReq     .store(false);
     m_isSeekV     .store(false);
     m_isSeekA     .store(false);
