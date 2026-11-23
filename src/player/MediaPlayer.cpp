@@ -150,8 +150,10 @@ void MediaPlayer::clear()
 {
     stop();
 
-    if (m_audio)  
+    if (m_audio) {
+        m_audio->uninit();  
         m_audio->reset();
+    }
     if (m_decoder) {
         if (m_demuxThread.joinable())       m_demuxThread.join();
         if (m_videoDecodeThread.joinable()) m_videoDecodeThread.join();
@@ -160,24 +162,30 @@ void MediaPlayer::clear()
         m_decoder->clear();
         m_decoder->reset();
     }
+    
 }
 
 bool MediaPlayer::loadVideo(const QString &path) 
 {
-    cleanupDecoder();
     cleanupAudio();
+    clear();
 
-    if (!m_decoder)
-        if (!initDecoder())  return false;
-
+    if (!m_decoder) {
+        qDebug() << "Core: Init decoder..";
+        if (!initDecoder())
+            return false;
+    }
     if (!m_decoder->loadSource(path)) {
         qDebug() << "Core: Couldn't open video file: " << path;
         clear();
         return false;
     }
 
-    if (!m_audio)
-        if (!initAudio())  return false;
+    if (!m_audio) {
+        qDebug() << "Core: Init audio..";
+        if (!initAudio())
+            return false;
+    }
     
     m_decoder->notify();
     
