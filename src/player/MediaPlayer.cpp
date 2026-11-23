@@ -4,6 +4,7 @@
 #include "../EventBus.h"
 
 #include <qdebug.h>
+#include <qlogging.h>
 #include <qobject.h>
 #include <QDebug>
 #include <QImage>
@@ -192,7 +193,10 @@ void MediaPlayer::play()
     if (m_state == playbackState::Playing) return;
     m_state = playbackState::Playing;
 
-    if (!m_decoder) {
+    if (m_decoder) {
+        qDebug() << "Core: Decoder start..";
+        m_decoder->resume();
+    } else {
         qDebug() << "Core: Decoder not init";
         // int ret = initDecoder();
         return;
@@ -232,9 +236,12 @@ void MediaPlayer::pause()
 
     if (m_renderTimer)
         m_renderTimer->stop();
+    if (m_decoder)
+        m_decoder->pause();
     if (m_audio)
         m_audio->stop();
     
+
     emit EventBus::instance().playbackChanged(m_state);
 }
 

@@ -63,6 +63,10 @@ static int64_t AFrameSizeExtract(const audioFrame &aFrame) {
     return static_cast<int64_t>(aFrame.samples.size() * sizeof(float));
 }
 
+bool Decoder::isPaused() {
+    return !m_paused.load() || m_abort.load();
+}
+
 Decoder::Decoder(QObject *parent) : QObject(parent)
 {
     connect(&EventBus::instance(), &EventBus::seekRequested, this, &Decoder::seek);
@@ -251,6 +255,7 @@ void Decoder::demuxLoop()
 {
     while (!m_abort.load())
     {
+        waitIfPause();
         if (m_seekReq.exchange(false)) {
             seekTo(m_seekTargetMs.load());
             continue;
@@ -298,7 +303,7 @@ bool Decoder::drainVideoFrame(AVFrame *frame)
     }
 
     while (!m_abort.load()) // FRAME LOAD
-    {  
+    {
         int ret = avcodec_receive_frame(m_codecContextVideo, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return true;
@@ -349,6 +354,7 @@ void Decoder::decodeVideoLoop()
 
     while (!m_abort.load()) 
     {
+        waitIfPause();
         if (m_frameVQueue.isFull(durMs, KBytes)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
@@ -360,7 +366,7 @@ void Decoder::decodeVideoLoop()
 
         // End file
         if (packet == nullptr) {
-            std::lock_guard<std::mutex> lock(videoMtx);
+            std::lock_guard<std::mutex> lock(m_videoMtx);
 
             avcodec_send_packet(m_codecContextVideo, nullptr);
             drainVideoFrame(frame);
@@ -369,7 +375,7 @@ void Decoder::decodeVideoLoop()
         }
 
         {
-            std::lock_guard<std::mutex> lock(videoMtx);
+            std::lock_guard<std::mutex> lock(m_videoMtx);
 
             int ret = avcodec_send_packet(m_codecContextVideo, packet);
             av_packet_free(&packet);
@@ -448,6 +454,7 @@ void Decoder::decodeAudioLoop()
 
     while (!m_abort.load()) 
     {
+        waitIfPause();
         if (m_frameAQueue.isFull(durMs, KBytes)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
@@ -458,7 +465,7 @@ void Decoder::decodeAudioLoop()
             break;
 
         {
-            std::lock_guard<std::mutex> lock(audioMtx);
+            std::lock_guard<std::mutex> lock(m_audioMtx);
 
             // End file
             if (packet == nullptr) {
@@ -479,9 +486,25 @@ void Decoder::decodeAudioLoop()
     av_frame_free(&frame);
 }
 
+void Decoder::waitIfPause()
+{
+    std::unique_lock locker(m_pauseMtx);
+    m_pauseCv.wait(locker, [&] () {  return !m_paused.load() || m_abort.load();  });
+}
+
 void Decoder::pause()
 {
+    std::lock_guard locker(m_pauseMtx);
+    m_paused.store(true);
+}
 
+void Decoder::resume()
+{
+    {
+        std::lock_guard locker(m_pauseMtx);
+        m_paused.store(false);
+    }
+    m_pauseCv.notify_all();
 }
 
 void Decoder::stop()
@@ -604,14 +627,14 @@ void Decoder::seekTo(int64_t posMs)
     m_pktVQueue.clear();
     
     {
-        std::lock_guard<std::mutex> lock(videoMtx);
+        std::lock_guard<std::mutex> lock(m_videoMtx);
         if (m_codecContextVideo) {
             avcodec_flush_buffers(m_codecContextVideo);
             m_frameVQueue.clear();
         }
     }
     {
-        std::lock_guard<std::mutex> lock(audioMtx);
+        std::lock_guard<std::mutex> lock(m_audioMtx);
         if (m_codecContextAudio) {
             avcodec_flush_buffers(m_codecContextAudio);
             m_frameAQueue.clear();

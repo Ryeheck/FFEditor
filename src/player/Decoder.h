@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QImage>
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -53,26 +54,29 @@ public:
 public slots:
     void stop();
     void pause();
+    void resume();
     void reset();
     void clear();
-    bool loadSource(const QString &filename);
+    void notify();
     void seek(qint64 posMs); 
     void decodeVideoLoop();
     void demuxLoop();
     void decodeAudioLoop();
-    qint64 getDuration();
+    bool loadSource(const QString &filename);
     bool initAudio(int channels = 2);
-    void notify();
+    qint64 getDuration();
     
 private:
+    void waitIfPause();
     void seekTo(int64_t posMs);
     bool isSeeking() const;
     bool seekInBuffer(int64_t posMs);
+    bool isPaused();
     bool demuxShouldWait();
     bool drainVideoFrame(AVFrame *frame);
     bool drainAudioFrame(AVFrame *frame);
-    QString errorString(int ret);
 
+    QString errorString(int ret);
     AVFramePtr cloneToSharedPtr(AVFrame *frame);
     int64_t getFramePosMs(const AVFrame *frame, int streamIndex) const;
 
@@ -87,8 +91,11 @@ private:
     FrameQueue<videoFrame > m_frameVQueue;
     FrameQueue<audioFrame > m_frameAQueue;
 
-    std::mutex videoMtx;
-    std::mutex audioMtx;
+    std::mutex m_videoMtx;
+    std::mutex m_audioMtx;
+    std::mutex m_pauseMtx;
+
+    std::condition_variable m_pauseCv;
 
     std::atomic<bool> m_abort   {false};
     std::atomic<bool> m_seekReq {false};
@@ -96,14 +103,16 @@ private:
     std::atomic<bool> m_isSeekA {false};
     std::atomic<bool> m_Iframe  {false};
     std::atomic<bool> m_preview {false};
+    std::atomic<bool> m_paused  {false};
 
     std::atomic<int64_t> m_seekTargetMs{0};
 
-    int64_t m_duration     = -1;
     int m_sampleRate       = -1;
     int m_channels         = -1;
     int m_videoStreamIndex = -1;
     int m_audioStreamIndex = -1;
+    
+    int64_t m_duration     = -1;
 };
 
 #endif // DECODER_H
