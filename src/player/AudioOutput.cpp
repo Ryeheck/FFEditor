@@ -104,6 +104,11 @@ void AudioOutput::start()
     }
 }
 
+int AudioOutput::channels()
+{
+    return m_channels.load();
+}
+
 void AudioOutput::setVolume(const float volume)
 {
     if (m_init)
@@ -158,6 +163,6 @@ void AudioOutput::seekTo(const qint64 posMs)
 
 qint64 AudioOutput::getAudioClockMs()
 {
-    if (m_playedAudioSamples.load() < 0)  return 0;
+    if (m_playedAudioSamples.load() <= 0 || m_sampleRate <= 0)  return 0;
     return static_cast<qint64>((m_playedAudioSamples.load() * 1000) / m_sampleRate);
 }
