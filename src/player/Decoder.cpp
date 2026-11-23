@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <iso646.h>
 #include <mutex>
 #include <qdebug.h>
 #include <qhashfunctions.h>
@@ -193,6 +194,8 @@ bool Decoder::loadSource(const QString &filename)
         return false;
     }
 
+    initAudio();
+    notify();
     return true;
 }
 
@@ -391,6 +394,8 @@ void Decoder::decodeVideoLoop()
 
 bool Decoder::drainAudioFrame(AVFrame *frame)
 {
+    if (!m_swrContext)  return false;
+
     while (!m_abort.load())
     {  
         int ret = avcodec_receive_frame(m_codecContextAudio, frame);
@@ -446,6 +451,10 @@ bool Decoder::drainAudioFrame(AVFrame *frame)
 
 void Decoder::decodeAudioLoop()
 {
+    if (!m_swrContext) {
+        qDebug() << "Decoder not init audio";
+        return;
+    }
     AVFrame *frame = av_frame_alloc();
 
     int64_t durMs  = 5000;             // Max queue = 5 sec
@@ -478,7 +487,7 @@ void Decoder::decodeAudioLoop()
 
             if (ret < 0) continue;
             if (!drainAudioFrame(frame)) {
-                qDebug() << "drain video frame send false";
+                qDebug() << "drain audio frame send false";
                 // Something..
             }
         }
